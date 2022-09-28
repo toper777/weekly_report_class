@@ -1,5 +1,6 @@
 import argparse
 import datetime
+import locale
 import os
 import sys
 from pathlib import Path
@@ -16,10 +17,11 @@ from MyLoggingException import MyLoggingException
 class WeeklyReport:
     def __init__(self):
         self.program_name = Path(__file__).name.split('.')[0]
-        self.program_version = "0.1.1"
+        self.program_version = "0.1.2"
+        self.log_level = 'ERROR'
 
         logger.remove()
-        logger.add(sys.stdout, level='INFO')
+        logger.add(sys.stdout, level=self.log_level)
 
         self.parser = argparse.ArgumentParser(description=f'{self.program_name} v.{self.program_version}')
         self.parser.add_argument("-b", "--begin-date", type=str, help="Дата начала периода анализа формат YYYY-MM-DD")
@@ -95,7 +97,7 @@ class WeeklyReport:
             'РРЛ': 'rrl_report'
         }
 
-        wb = FormattedWorkbook()
+        wb = FormattedWorkbook(logging_level=self.log_level)
 
         report_columns = [
             'ID_ESUP',
@@ -153,6 +155,8 @@ class WeeklyReport:
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
+    locale.setlocale(locale.LC_ALL, '')
+
     wr = WeeklyReport()
     print(f'{wr.program_name} v.{wr.program_version}')
     df = wr.get_data()
