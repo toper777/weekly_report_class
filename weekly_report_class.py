@@ -17,7 +17,7 @@ from MyLoggingException import MyLoggingException
 class WeeklyReport:
     def __init__(self):
         self.program_name = Path(__file__).name.split('.')[0]
-        self.program_version = "0.1.2"
+        self.program_version = "0.1.3"
         self.log_level = 'ERROR'
 
         logger.remove()
@@ -29,21 +29,28 @@ class WeeklyReport:
         self.args = self.parser.parse_args()
 
         if self.args.begin_date is None:
-            self.begin_date = datetime.date(datetime.date.today().year, datetime.date.today().month, 1).strftime('%Y-%m-%d')
+            self.begin_date = datetime.date(datetime.date.today().year, datetime.date.today().month, 1)
+            save_begin_date = self.begin_date.strftime('%Y-%m-%d')
+            self.begin_date = self.begin_date.strftime('%Y-%m-%d %H:%M:%S')
         else:
-            self.begin_date = self.args.begin_date
+            save_begin_date = self.args.begin_date
+            self.begin_date = f'{self.args.begin_date} {datetime.time(hour=0, minute=0, second=0).strftime("%H:%M:%S")}'
 
         # Дата конца анализа
         if self.args.end_date is None:
             self.end_date = self.last_day_of_month(datetime.date(datetime.date.today().year, datetime.date.today().month, 1)).strftime('%Y-%m-%d')
+            save_end_date = self.end_date
+            self.end_date = f'{self.end_date} {datetime.time(hour=23, minute=59, second=59).strftime("%H:%M:%S")}'
         else:
-            self.end_date = self.args.end_date
+            save_end_date = self.args.end_date
+            self.end_date = f'{self.args.end_date} {datetime.time(hour=23, minute=59, second=59).strftime("%H:%M:%S")}'
 
         self.url = f'\\\\megafon.ru\\KVK\\KRN\\Files\\TelegrafFiles\\ОПРС\\!Проекты РЦРП\\Блок №3\\2022 год\\!!!SQL Блок№3!!!  2022.xlsm'
+        # self.url = f'\\\\megafon.ru\\KVK\\KRN\\Files\\TelegrafFiles\\ОПРС\\!Проекты РЦРП\\Блок №3\\2022 год\\Архив\\20221101 !!!SQL Блок№3!!!  2022.xlsm'
         # sheets = ['Массив', 'Рефарминг']
         self.sheets = ['Массив']
         self.report_file = f'\\\\megafon.ru\\KVK\\KRN\\Files\\TelegrafFiles\\ОПРС\\!Проекты РЦРП\\Блок №3\\2022 год\\Отчеты\\{datetime.date.today().strftime("%Y%m%d")} Отчет по ' \
-                           f'выполнению мероприятий КФ [{self.begin_date} - {self.end_date}].xlsx'
+                           f'выполнению мероприятий КФ [{save_begin_date} - {save_end_date}].xlsx'
 
     @staticmethod
     def last_day_of_month(_date: datetime) -> datetime:
