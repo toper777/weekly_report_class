@@ -17,7 +17,7 @@ from MyLoggingException import MyLoggingException
 class WeeklyReport:
     def __init__(self):
         self.program_name = Path(__file__).name.split('.')[0]
-        self.program_version = "0.1.3"
+        self.program_version = "0.1.4"
         self.log_level = 'ERROR'
 
         logger.remove()
@@ -45,12 +45,13 @@ class WeeklyReport:
             save_end_date = self.args.end_date
             self.end_date = f'{self.args.end_date} {datetime.time(hour=23, minute=59, second=59).strftime("%H:%M:%S")}'
 
-        self.url = f'\\\\megafon.ru\\KVK\\KRN\\Files\\TelegrafFiles\\ОПРС\\!Проекты РЦРП\\Блок №3\\2022 год\\!!!SQL Блок№3!!!  2022.xlsm'
+        self.url = f'\\\\megafon.ru\\KVK\\KRN\\Files\\TelegrafFiles\\ОПРС\\!Проекты РЦРП\\Блок №3\\2023 год\\MDP_22_23.xlsm'
         # self.url = f'\\\\megafon.ru\\KVK\\KRN\\Files\\TelegrafFiles\\ОПРС\\!Проекты РЦРП\\Блок №3\\2022 год\\Архив\\20221101 !!!SQL Блок№3!!!  2022.xlsm'
         # sheets = ['Массив', 'Рефарминг']
         self.sheets = ['Массив']
         self.report_file = f'\\\\megafon.ru\\KVK\\KRN\\Files\\TelegrafFiles\\ОПРС\\!Проекты РЦРП\\Блок №3\\2022 год\\Отчеты\\{datetime.date.today().strftime("%Y%m%d")} Отчет по ' \
                            f'выполнению мероприятий КФ [{save_begin_date} - {save_end_date}].xlsx'
+        self.not_done_file = f'\\\\megafon.ru\\KVK\\KRN\\Files\\TelegrafFiles\\ОПРС\\!Проекты РЦРП\\Блок №3\\2022 год\\Отчеты\\Риски ВОЛС.xlsx'
 
     @staticmethod
     def last_day_of_month(_date: datetime) -> datetime:
@@ -126,18 +127,20 @@ class WeeklyReport:
         mask_bs_build = df_kpi['BP_ESUP'] == 'Строительство БС/АМС'
         mask_bs_rec = df_kpi['BP_ESUP'] == 'Переоборудование БС'
         mask_bs_pico = df_kpi['BP_ESUP'] == 'Pico Cell_Включение'
+        mask_bs_dem = df_kpi['BP_ESUP'] == 'Демонтаж БС/АМС'
 
         mask_new_bs = df_kpi['CHECK_NEW_PLAN'] == 'Новая'
+        mask_check_plan = df_kpi['CHECK_PLAN'] == 'Да'
 
-        df_all_bs = df_kpi[mask_bs_build | mask_bs_rec | mask_bs_pico][report_columns]
+        df_all_bs = df_kpi[mask_check_plan & (mask_bs_build | mask_bs_rec | mask_bs_pico | mask_bs_dem)][report_columns]
         print(f'Создаем лист отчета: {Colors.GREEN}"Всего БС"{Colors.END}')
         wb.excel_format_table(self.make_report(df_all_bs), 'Всего БС', report_sheets['Всего БС'])
 
-        df_new_bs = df_kpi[mask_bs_build & mask_new_bs][report_columns]
+        df_new_bs = df_kpi[mask_check_plan & mask_bs_build & mask_new_bs][report_columns]
         print(f'Создаем лист отчета: {Colors.GREEN}"Новые БС"{Colors.END}')
         wb.excel_format_table(self.make_report(df_new_bs), 'Новые БС', report_sheets['Новые БС'])
 
-        df_rrl = df_kpi[mask_rrl_build | mask_rrl_rec][report_columns]
+        df_rrl = df_kpi[mask_check_plan & mask_rrl_build | mask_rrl_rec][report_columns]
         print(f'Создаем лист отчета: {Colors.GREEN}"РРЛ"{Colors.END}')
         wb.excel_format_table(self.make_report(df_rrl), 'РРЛ', report_sheets['РРЛ'])
 
@@ -159,6 +162,16 @@ class WeeklyReport:
             except Exception as ex:
                 raise MyLoggingException(f'Не могу сохранить файл отчета "{self.report_file}". Ошибка: {ex}')
 
+    def _read_not_done(self):
+        try:
+            print(f'Получение данных из файла {Colors.GREEN}"{self.not_done_file}"{Colors.END}')
+            _df_n_d = pd.read_excel(self.not_done_file, sheet_name=self.sheets)
+            return _df_n_d
+        except FileNotFoundError as ex:
+            raise MyLoggingException(f'Файл {self.not_done_file} не существует. Ошибка {ex}')
+        except Exception as ex:
+            raise MyLoggingException(f'Ошибка при получении данных: {ex}')
+
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
@@ -169,4 +182,3 @@ if __name__ == '__main__':
     df = wr.get_data()
     work_book = wr.report_kpi(df[wr.sheets[0]])
     wr.save_report(work_book)
-
