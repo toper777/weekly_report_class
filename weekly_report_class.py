@@ -17,7 +17,7 @@ from MyLoggingException import MyLoggingException
 class WeeklyReport:
     def __init__(self):
         self.program_name = Path(__file__).name.split('.')[0]
-        self.program_version = "0.1.5"
+        self.program_version = "0.1.6"
         self.log_level = 'ERROR'
 
         logger.remove()
@@ -89,6 +89,7 @@ class WeeklyReport:
         mask_fact_date = self.make_date_mask(_df, 'TRUNC(A.MIN_DATE_FACT)', self.begin_date, self.end_date)
         mask_check_fact = (_df['CHECK_FACT'] == 1)
 
+        logger.debug(_df[mask_prognoz_date])
         df_plan = _df[mask_plan_date].groupby(['RO_CLUSTER', 'RO']).agg({'PLAN_DATE_END': 'count', }).reset_index()
         df_prognoz = _df[mask_prognoz_date].groupby(['RO_CLUSTER', 'RO']).agg({'PROGNOZ_DATE': 'count', }).reset_index()
         df_fact = _df[mask_fact_date & mask_check_fact].groupby(['RO_CLUSTER', 'RO']).agg({'CHECK_FACT': 'count', }).reset_index()
@@ -113,6 +114,7 @@ class WeeklyReport:
             'ID_ESUP',
             'BP_ESUP',
             'PROGRAM',
+            'CHECK_PLAN',
             'CHECK_FACT',
             'RO',
             'RO_CLUSTER',
@@ -143,7 +145,7 @@ class WeeklyReport:
         print(f'Создаем лист отчета: {Colors.GREEN}"Новые БС"{Colors.END}')
         wb.excel_format_table(self.make_report(df_new_bs), 'Новые БС', report_sheets['Новые БС'])
 
-        df_rrl = df_kpi[mask_check_plan & mask_rrl_build | mask_rrl_rec][report_columns]
+        df_rrl = df_kpi[mask_check_plan & (mask_rrl_build | mask_rrl_rec)][report_columns]
         print(f'Создаем лист отчета: {Colors.GREEN}"РРЛ"{Colors.END}')
         wb.excel_format_table(self.make_report(df_rrl), 'РРЛ', report_sheets['РРЛ'])
 
