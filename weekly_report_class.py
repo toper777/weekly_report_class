@@ -17,7 +17,7 @@ from MyLoggingException import MyLoggingException
 class WeeklyReport:
     def __init__(self):
         self.program_name = Path(__file__).name.split('.')[0]
-        self.program_version = "0.1.4"
+        self.program_version = "0.1.5"
         self.log_level = 'ERROR'
 
         logger.remove()
@@ -49,9 +49,9 @@ class WeeklyReport:
         # self.url = f'\\\\megafon.ru\\KVK\\KRN\\Files\\TelegrafFiles\\ОПРС\\!Проекты РЦРП\\Блок №3\\2022 год\\Архив\\20221101 !!!SQL Блок№3!!!  2022.xlsm'
         # sheets = ['Массив', 'Рефарминг']
         self.sheets = ['Массив']
-        self.report_file = f'\\\\megafon.ru\\KVK\\KRN\\Files\\TelegrafFiles\\ОПРС\\!Проекты РЦРП\\Блок №3\\2022 год\\Отчеты\\{datetime.date.today().strftime("%Y%m%d")} Отчет по ' \
+        self.report_file = f'\\\\megafon.ru\\KVK\\KRN\\Files\\TelegrafFiles\\ОПРС\\!Проекты РЦРП\\Блок №3\\2023 год\\Отчеты\\{datetime.date.today().strftime("%Y%m%d")} Отчет по ' \
                            f'выполнению мероприятий КФ [{save_begin_date} - {save_end_date}].xlsx'
-        self.not_done_file = f'\\\\megafon.ru\\KVK\\KRN\\Files\\TelegrafFiles\\ОПРС\\!Проекты РЦРП\\Блок №3\\2022 год\\Отчеты\\Риски ВОЛС.xlsx'
+        self.not_done_file = f'\\\\megafon.ru\\KVK\\KRN\\Files\\TelegrafFiles\\ОПРС\\!Проекты РЦРП\\Блок №3\\2023 год\\Отчеты\\Риски ВОЛС.xlsx'
 
     @staticmethod
     def last_day_of_month(_date: datetime) -> datetime:
@@ -81,17 +81,19 @@ class WeeklyReport:
             'RO': 'Регион',
             'PROGNOZ_DATE': 'Прогноз',
             'CHECK_FACT': 'Факт',
-            'PLAN_DATE_END': 'MDP План'
+            'PLAN_DATE_END': 'MDP План',
+            'RO_CLUSTER': 'Кластер',
         }
         mask_plan_date = self.make_date_mask(_df, 'PLAN_DATE_END', self.begin_date, self.end_date)
         mask_prognoz_date = self.make_date_mask(_df, 'PROGNOZ_DATE', self.begin_date, self.end_date)
         mask_fact_date = self.make_date_mask(_df, 'TRUNC(A.MIN_DATE_FACT)', self.begin_date, self.end_date)
         mask_check_fact = (_df['CHECK_FACT'] == 1)
 
-        df_plan = _df[mask_plan_date].groupby(['RO']).agg({'PLAN_DATE_END': 'count', }).reset_index()
-        df_prognoz = _df[mask_prognoz_date].groupby(['RO']).agg({'PROGNOZ_DATE': 'count', }).reset_index()
-        df_fact = _df[mask_fact_date & mask_check_fact].groupby(['RO']).agg({'CHECK_FACT': 'count', }).reset_index()
-        _df = pd.merge(df_plan, pd.merge(df_prognoz, df_fact, how='outer', sort=True), how='outer', sort=True).fillna(value=0).rename(columns=rename_columns)
+        df_plan = _df[mask_plan_date].groupby(['RO_CLUSTER', 'RO']).agg({'PLAN_DATE_END': 'count', }).reset_index()
+        df_prognoz = _df[mask_prognoz_date].groupby(['RO_CLUSTER', 'RO']).agg({'PROGNOZ_DATE': 'count', }).reset_index()
+        df_fact = _df[mask_fact_date & mask_check_fact].groupby(['RO_CLUSTER', 'RO']).agg({'CHECK_FACT': 'count', }).reset_index()
+
+        _df = pd.merge(df_plan, pd.merge(df_prognoz, df_fact, how='outer', sort=True), how='outer', sort=True).fillna(value=0).sort_values(by='RO_CLUSTER').rename(columns=rename_columns)
 
         _df[delta_char] = _df['Факт'] - _df['Прогноз']
         _df.loc["total"] = _df.sum(numeric_only=True)
@@ -113,12 +115,13 @@ class WeeklyReport:
             'PROGRAM',
             'CHECK_FACT',
             'RO',
+            'RO_CLUSTER',
             'NAZ',
             'CHECK_NEW_PLAN',
             'PLAN_DATE_END',
             'PROGNOZ_DATE',
             'PROGNOZ_COMMENT',
-            'MDP_PAP',
+            'MDP_PAP2023',
             'TRUNC(A.MIN_DATE_FACT)',
         ]
 
@@ -132,7 +135,7 @@ class WeeklyReport:
         mask_new_bs = df_kpi['CHECK_NEW_PLAN'] == 'Новая'
         mask_check_plan = df_kpi['CHECK_PLAN'] == 'Да'
 
-        df_all_bs = df_kpi[mask_check_plan & (mask_bs_build | mask_bs_rec | mask_bs_pico | mask_bs_dem)][report_columns]
+        df_all_bs = df_kpi[mask_check_plan & (mask_bs_build | mask_bs_rec | mask_bs_pico)][report_columns]
         print(f'Создаем лист отчета: {Colors.GREEN}"Всего БС"{Colors.END}')
         wb.excel_format_table(self.make_report(df_all_bs), 'Всего БС', report_sheets['Всего БС'])
 
