@@ -16,8 +16,8 @@ from MyLoggingException import MyLoggingException
 
 class WeeklyReport:
     def __init__(self):
-        self.program_name = Path(__file__).name.split('.')[0]
-        self.program_version = "0.1.6"
+        self.program_name = Path(__file__).stem
+        self.program_version = "0.1.7"
         self.log_level = 'ERROR'
 
         logger.remove()
