@@ -46,12 +46,11 @@ class WeeklyReport:
             self.end_date = f'{self.args.end_date} {datetime.time(hour=23, minute=59, second=59).strftime("%H:%M:%S")}'
 
         self.url = f'\\\\megafon.ru\\KVK\\KRN\\Files\\TelegrafFiles\\ОПРС\\!Проекты РЦРП\\Блок №3\\2023 год\\MDP_22_23.xlsm'
-        # self.url = f'\\\\megafon.ru\\KVK\\KRN\\Files\\TelegrafFiles\\ОПРС\\!Проекты РЦРП\\Блок №3\\2022 год\\Архив\\20221101 !!!SQL Блок№3!!!  2022.xlsm'
-        # sheets = ['Массив', 'Рефарминг']
         self.sheets = ['Массив']
         self.report_file = f'\\\\megafon.ru\\KVK\\KRN\\Files\\TelegrafFiles\\ОПРС\\!Проекты РЦРП\\Блок №3\\2023 год\\Отчеты\\{datetime.date.today().strftime("%Y%m%d")} Отчет по ' \
                            f'выполнению мероприятий КФ [{save_begin_date} - {save_end_date}].xlsx'
         self.not_done_file = f'\\\\megafon.ru\\KVK\\KRN\\Files\\TelegrafFiles\\ОПРС\\!Проекты РЦРП\\Блок №3\\2023 год\\Отчеты\\Риски ВОЛС.xlsx'
+        self.region_obligations_file = f'\\\\megafon.ru\\KVK\\KRN\\Files\\TelegrafFiles\\ОПРС\\!Проекты РЦРП\\Блок №3\\2023 год\\Обязательства регионов.xlsx'
 
     @staticmethod
     def last_day_of_month(_date: datetime) -> datetime:
