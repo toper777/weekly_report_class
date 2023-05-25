@@ -17,7 +17,7 @@ from MyLoggingException import MyLoggingException
 class WeeklyReport:
     def __init__(self):
         self.program_name = Path(__file__).stem
-        self.program_version = "0.1.9"
+        self.program_version = "0.1.10"
         self.log_level = 'ERROR'
 
         logger.remove()
@@ -41,10 +41,17 @@ class WeeklyReport:
         if self.args.end_date is None:
             self.end_date = self.last_day_of_month(datetime.date(datetime.date.today().year, datetime.date.today().month, 1)).strftime('%Y-%m-%d')
             save_end_date = self.end_date
-            self.end_date = f'{self.end_date} {datetime.time(hour=23, minute=59, second=59).strftime("%H:%M:%S")}'
+            self.end_date = f'{self.end_date} {datetime.time(hour=23, minute=59, second=59, microsecond=99999).strftime("%H:%M:%S")}'
         else:
             save_end_date = self.args.end_date
-            self.end_date = f'{self.args.end_date} {datetime.time(hour=23, minute=59, second=59).strftime("%H:%M:%S")}'
+            self.end_date = f'{self.args.end_date} {datetime.time(hour=23, minute=59, second=59, microsecond=99999).strftime("%H:%M:%S")}'
+
+        if datetime.datetime.fromisoformat(self.begin_date).year == datetime.datetime.fromisoformat(self.end_date).year:
+            self.process_year = [datetime.datetime.fromisoformat(self.begin_date).year]
+        else:
+            self.process_year = [datetime.datetime.fromisoformat(self.begin_date).year, datetime.datetime.fromisoformat(self.end_date).year]
+
+        logger.debug(f'self.process_year.__len__() = {self.process_year.__len__()}')
 
         self.url = f'\\\\megafon.ru\\KVK\\KRN\\Files\\TelegrafFiles\\ОПРС\\!Проекты РЦРП\\Блок №3\\2023 год\\MDP_22_23.xlsm'
         self.sheets = ['Массив']
@@ -137,19 +144,23 @@ class WeeklyReport:
         mask_bs_rec = df_kpi['BP_ESUP'] == 'Переоборудование БС'
         mask_bs_pico = df_kpi['BP_ESUP'] == 'Pico Cell_Включение'
         mask_bs_dem = df_kpi['BP_ESUP'] == 'Демонтаж БС/АМС'
-
+        if self.process_year.__len__() == 2:
+            mask_plan_year = (df_kpi['PLAN_YEAR'] == self.process_year[0]) | (df_kpi['PLAN_YEAR'] == self.process_year[1])
+        else:
+            mask_plan_year = df_kpi['PLAN_YEAR'] == self.process_year[0]
+        # mask_plan_year = df_kpi['PLAN_YEAR'] == 2023
         mask_new_bs = df_kpi['CHECK_NEW_PLAN'] == 'Новая'
         mask_check_plan = df_kpi['CHECK_PLAN'] == 'Да'
 
-        df_all_bs = df_kpi[mask_check_plan & (mask_bs_build | mask_bs_rec | mask_bs_pico)][report_columns]
+        df_all_bs = df_kpi[mask_check_plan & (mask_bs_build | mask_bs_rec | mask_bs_pico) & mask_plan_year][report_columns]
         print(f'Создаем лист отчета: {Colors.GREEN}"Всего БС"{Colors.END}')
         wb.excel_format_table(self.make_report(df_all_bs), 'Всего БС', report_sheets['Всего БС'])
 
-        df_new_bs = df_kpi[mask_check_plan & mask_bs_build & mask_new_bs][report_columns]
+        df_new_bs = df_kpi[mask_check_plan & mask_bs_build & mask_new_bs & mask_plan_year][report_columns]
         print(f'Создаем лист отчета: {Colors.GREEN}"Новые БС"{Colors.END}')
         wb.excel_format_table(self.make_report(df_new_bs), 'Новые БС', report_sheets['Новые БС'])
 
-        df_rrl = df_kpi[mask_check_plan & (mask_rrl_build | mask_rrl_rec)][report_columns]
+        df_rrl = df_kpi[mask_check_plan & (mask_rrl_build | mask_rrl_rec) & mask_plan_year][report_columns]
         print(f'Создаем лист отчета: {Colors.GREEN}"РРЛ"{Colors.END}')
         wb.excel_format_table(self.make_report(df_rrl), 'РРЛ', report_sheets['РРЛ'])
 
