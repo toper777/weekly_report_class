@@ -17,7 +17,7 @@ from MyLoggingException import MyLoggingException
 class WeeklyReport:
     def __init__(self):
         self.program_name = Path(__file__).stem
-        self.program_version = "0.1.8"
+        self.program_version = "0.1.9"
         self.log_level = 'ERROR'
 
         logger.remove()
@@ -26,6 +26,7 @@ class WeeklyReport:
         self.parser = argparse.ArgumentParser(description=f'{self.program_name} v.{self.program_version}')
         self.parser.add_argument("-b", "--begin-date", type=str, help="Дата начала периода анализа формат YYYY-MM-DD")
         self.parser.add_argument("-e", "--end-date", type=str, help="Дата окончания периода анализа формат YYYY-MM-DD")
+        self.parser.add_argument("--save-ap", action='store_true', help="Созранять адресные планы вместе с отчетом")
         self.args = self.parser.parse_args()
 
         if self.args.begin_date is None:
@@ -47,8 +48,10 @@ class WeeklyReport:
 
         self.url = f'\\\\megafon.ru\\KVK\\KRN\\Files\\TelegrafFiles\\ОПРС\\!Проекты РЦРП\\Блок №3\\2023 год\\MDP_22_23.xlsm'
         self.sheets = ['Массив']
-        self.report_file = f'\\\\megafon.ru\\KVK\\KRN\\Files\\TelegrafFiles\\ОПРС\\!Проекты РЦРП\\Блок №3\\2023 год\\Отчеты\\{datetime.date.today().strftime("%Y%m%d")} Отчет по ' \
-                           f'выполнению мероприятий КФ [{save_begin_date} - {save_end_date}].xlsx'
+        if not self.args.save_ap:
+            self.report_file = f'\\\\megafon.ru\\KVK\\KRN\\Files\\TelegrafFiles\\ОПРС\\!Проекты РЦРП\\Блок №3\\2023 год\\Отчеты\\{datetime.date.today().strftime("%Y%m%d")} Отчет по выполнению мероприятий КФ [{save_begin_date} - {save_end_date}].xlsx'
+        else:
+            self.report_file = f'\\\\megafon.ru\\KVK\\KRN\\Files\\TelegrafFiles\\ОПРС\\!Проекты РЦРП\\Блок №3\\2023 год\\Отчеты\\{datetime.date.today().strftime("%Y%m%d")} Отчет по выполнению мероприятий КФ [{save_begin_date} - {save_end_date}] [АП].xlsx'
         self.not_done_file = f'\\\\megafon.ru\\KVK\\KRN\\Files\\TelegrafFiles\\ОПРС\\!Проекты РЦРП\\Блок №3\\2023 год\\Отчеты\\Риски ВОЛС.xlsx'
         self.region_obligations_file = f'\\\\megafon.ru\\KVK\\KRN\\Files\\TelegrafFiles\\ОПРС\\!Проекты РЦРП\\Блок №3\\2023 год\\Обязательства регионов.xlsx'
 
@@ -104,7 +107,9 @@ class WeeklyReport:
         report_sheets = {
             'Всего БС': 'all_bs_report',
             'Новые БС': 'new_bs_report',
-            'РРЛ': 'rrl_report'
+            'РРЛ': 'rrl_report',
+            'АП БС': 'ap_all_bs',
+            'АП РРЛ': 'ap_rrl',
         }
 
         wb = FormattedWorkbook(logging_level=self.log_level)
@@ -148,6 +153,14 @@ class WeeklyReport:
         print(f'Создаем лист отчета: {Colors.GREEN}"РРЛ"{Colors.END}')
         wb.excel_format_table(self.make_report(df_rrl), 'РРЛ', report_sheets['РРЛ'])
 
+        if self.args.save_ap:
+            # Сохраняем АП
+            for sheet_name, df_name in [["АП БС", df_all_bs],["АП РРЛ", df_rrl]]:
+                mask_prognoz_date = self.make_date_mask(df_name, 'PROGNOZ_DATE', self.begin_date, self.end_date)
+                print(f'Создаем лист отчета: {Colors.GREEN}"{sheet_name}"{Colors.END}')
+                _df = df_name[mask_prognoz_date]
+                wb.excel_format_table(_df, sheet_name, report_sheets[sheet_name])
+
         return wb
 
     def save_report(self, wb: FormattedWorkbook) -> None:
@@ -177,7 +190,6 @@ class WeeklyReport:
             raise MyLoggingException(f'Ошибка при получении данных: {ex}')
 
 
-# Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     locale.setlocale(locale.LC_ALL, '')
 
