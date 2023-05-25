@@ -121,11 +121,27 @@ class WeeklyReport:
 
         wb = FormattedWorkbook(logging_level=self.log_level)
 
+        rename_columns = {
+            'ID_ESUP': 'ЕСУП ID',
+            'SAP_EVT': 'SAP EVT',
+            'BP_ESUP': 'Бизнес процесс',
+            'RO': 'Региональное отделение',
+            'CHECK_NEW_PLAN': 'Новая/Существующая',
+            'NAZ': 'Наименование',
+            'PLAN_DATE_END': 'Плановая дата',
+            'PROGNOZ_DATE': 'Прогнозная дата',
+            'PROGNOZ_COMMENT': 'Комментарий к прогнозной дате',
+            'RS_2023': 'RAN Sharing 2023',
+            'TRUNC(A.MIN_DATE_FACT)': 'Мин. дата запуска',
+            'PROGRAM': 'Программа',
+            'CHECK_FACT': 'Факт запуска',
+            'RO_CLUSTER': 'Кластер',
+        }
+
         report_columns = [
             'ID_ESUP',
             'BP_ESUP',
             'PROGRAM',
-            'CHECK_PLAN',
             'CHECK_FACT',
             'RO',
             'RO_CLUSTER',
@@ -134,7 +150,8 @@ class WeeklyReport:
             'PLAN_DATE_END',
             'PROGNOZ_DATE',
             'PROGNOZ_COMMENT',
-            'MDP_PAP2023',
+            'Сезонные',
+            'RS_2023',
             'TRUNC(A.MIN_DATE_FACT)',
         ]
 
@@ -169,7 +186,7 @@ class WeeklyReport:
             for sheet_name, df_name in [["АП БС", df_all_bs],["АП РРЛ", df_rrl]]:
                 mask_prognoz_date = self.make_date_mask(df_name, 'PROGNOZ_DATE', self.begin_date, self.end_date)
                 print(f'Создаем лист отчета: {Colors.GREEN}"{sheet_name}"{Colors.END}')
-                _df = df_name[mask_prognoz_date]
+                _df = df_name[mask_prognoz_date].rename(columns=rename_columns)
                 wb.excel_format_table(_df, sheet_name, report_sheets[sheet_name])
 
         return wb
