@@ -17,7 +17,7 @@ from MyLoggingException import MyLoggingException
 class WeeklyReport:
     def __init__(self):
         self.program_name = Path(__file__).stem
-        self.program_version = "0.1.11"
+        self.program_version = "0.1.12"
         self.log_level = 'ERROR'
 
         logger.remove()
@@ -26,7 +26,7 @@ class WeeklyReport:
         self.parser = argparse.ArgumentParser(description=f'{self.program_name} v.{self.program_version}')
         self.parser.add_argument("-b", "--begin-date", type=str, help="Дата начала периода анализа формат YYYY-MM-DD")
         self.parser.add_argument("-e", "--end-date", type=str, help="Дата окончания периода анализа формат YYYY-MM-DD")
-        self.parser.add_argument("--dont-save-ap", action='store_true', help="Созранять адресные планы вместе с отчетом")
+        self.parser.add_argument("--dont-save-ap", action='store_true', help="Сохранять адресные планы вместе с отчетом")
         self.args = self.parser.parse_args()
 
         if self.args.begin_date is None:
@@ -51,16 +51,15 @@ class WeeklyReport:
         else:
             self.process_year = [datetime.datetime.fromisoformat(self.begin_date).year, datetime.datetime.fromisoformat(self.end_date).year]
 
-        logger.debug(f'self.process_year.__len__() = {self.process_year.__len__()}')
-
-        self.url = f'\\\\megafon.ru\\KVK\\KRN\\Files\\TelegrafFiles\\ОПРС\\!Проекты РЦРП\\Блок №3\\2023 год\\MDP_22_23.xlsm'
+        self.url = Path('//megafon.ru/KVK/KRN/Files/TelegrafFiles/ОПРС/!Проекты РЦРП/Блок №3/2023 год/MDP_22_23.xlsm')
+        self.dir_name = Path('//megafon.ru/KVK', 'KRN', 'Files', 'TelegrafFiles', 'ОПРС', '!Проекты РЦРП', 'Блок №3', f'{datetime.datetime.today().year} год', 'Отчеты')
         self.sheets = ['Массив']
         if self.args.dont_save_ap:
-            self.report_file = f'\\\\megafon.ru\\KVK\\KRN\\Files\\TelegrafFiles\\ОПРС\\!Проекты РЦРП\\Блок №3\\2023 год\\Отчеты\\{datetime.date.today().strftime("%Y%m%d")} Отчет по выполнению мероприятий КФ [{save_begin_date} - {save_end_date}].xlsx'
+            self.report_file = Path(self.dir_name, f'{datetime.date.today().strftime("%Y%m%d")} Отчет по выполнению мероприятий КФ [{save_begin_date} - {save_end_date}].xlsx')
         else:
-            self.report_file = f'\\\\megafon.ru\\KVK\\KRN\\Files\\TelegrafFiles\\ОПРС\\!Проекты РЦРП\\Блок №3\\2023 год\\Отчеты\\{datetime.date.today().strftime("%Y%m%d")} Отчет по выполнению мероприятий КФ [{save_begin_date} - {save_end_date}] [АП].xlsx'
-        self.not_done_file = f'\\\\megafon.ru\\KVK\\KRN\\Files\\TelegrafFiles\\ОПРС\\!Проекты РЦРП\\Блок №3\\2023 год\\Отчеты\\Риски ВОЛС.xlsx'
-        self.region_obligations_file = f'\\\\megafon.ru\\KVK\\KRN\\Files\\TelegrafFiles\\ОПРС\\!Проекты РЦРП\\Блок №3\\2023 год\\Обязательства регионов.xlsx'
+            self.report_file = Path(self.dir_name, f'{datetime.date.today().strftime("%Y%m%d")} Отчет по выполнению мероприятий КФ [{save_begin_date} - {save_end_date}] [АП].xlsx')
+        self.not_done_file = Path(self.dir_name, 'Риски ВОЛС.xlsx')
+        self.region_obligations_file = self.not_done_file = Path(self.dir_name, 'Обязательства регионов.xlsx')
 
     @staticmethod
     def last_day_of_month(_date: datetime) -> datetime:
