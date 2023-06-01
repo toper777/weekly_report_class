@@ -17,7 +17,7 @@ from MyLoggingException import MyLoggingException
 class WeeklyReport:
     def __init__(self):
         self.program_name = Path(__file__).stem
-        self.program_version = "0.1.12"
+        self.program_version = "0.1.13"
         self.log_level = 'ERROR'
 
         logger.remove()
@@ -168,7 +168,7 @@ class WeeklyReport:
         mask_new_bs = df_kpi['CHECK_NEW_PLAN'] == 'Новая'
         mask_check_plan = df_kpi['CHECK_PLAN'] == 'Да'
 
-        df_all_bs = df_kpi[mask_check_plan & (mask_bs_build | mask_bs_rec | mask_bs_pico) & mask_plan_year][report_columns]
+        df_all_bs = df_kpi[mask_check_plan & (mask_bs_build | mask_bs_rec | mask_bs_pico | mask_bs_dem) & mask_plan_year][report_columns]
         print(f'Создаем лист отчета: {Colors.GREEN}"Всего БС"{Colors.END}')
         wb.excel_format_table(self.make_report(df_all_bs), 'Всего БС', report_sheets['Всего БС'])
 
