@@ -17,7 +17,7 @@ from MyLoggingException import MyLoggingException
 class WeeklyReport:
     def __init__(self):
         self.program_name = Path(__file__).stem
-        self.program_version = "0.1.13"
+        self.program_version = "0.1.14"
         self.log_level = 'ERROR'
 
         logger.remove()
@@ -26,7 +26,7 @@ class WeeklyReport:
         self.parser = argparse.ArgumentParser(description=f'{self.program_name} v.{self.program_version}')
         self.parser.add_argument("-b", "--begin-date", type=str, help="Дата начала периода анализа формат YYYY-MM-DD")
         self.parser.add_argument("-e", "--end-date", type=str, help="Дата окончания периода анализа формат YYYY-MM-DD")
-        self.parser.add_argument("--dont-save-ap", action='store_true', help="Сохранять адресные планы вместе с отчетом")
+        self.parser.add_argument("--dont-save-ap", action='store_true', help="Не сохранять адресные планы вместе с отчетом")
         self.args = self.parser.parse_args()
 
         if self.args.begin_date is None:
@@ -164,7 +164,6 @@ class WeeklyReport:
             mask_plan_year = (df_kpi['PLAN_YEAR'] == self.process_year[0]) | (df_kpi['PLAN_YEAR'] == self.process_year[1])
         else:
             mask_plan_year = df_kpi['PLAN_YEAR'] == self.process_year[0]
-        # mask_plan_year = df_kpi['PLAN_YEAR'] == 2023
         mask_new_bs = df_kpi['CHECK_NEW_PLAN'] == 'Новая'
         mask_check_plan = df_kpi['CHECK_PLAN'] == 'Да'
 
@@ -172,7 +171,7 @@ class WeeklyReport:
         print(f'Создаем лист отчета: {Colors.GREEN}"Всего БС"{Colors.END}')
         wb.excel_format_table(self.make_report(df_all_bs), 'Всего БС', report_sheets['Всего БС'])
 
-        df_new_bs = df_kpi[mask_check_plan & mask_bs_build & mask_new_bs & mask_plan_year][report_columns]
+        df_new_bs = df_kpi[mask_check_plan & (mask_bs_build | mask_bs_rec | mask_bs_pico | mask_bs_dem) & mask_new_bs & mask_plan_year][report_columns]
         print(f'Создаем лист отчета: {Colors.GREEN}"Новые БС"{Colors.END}')
         wb.excel_format_table(self.make_report(df_new_bs), 'Новые БС', report_sheets['Новые БС'])
 
