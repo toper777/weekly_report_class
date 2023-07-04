@@ -17,7 +17,7 @@ from MyLoggingException import MyLoggingException
 class WeeklyReport:
     def __init__(self):
         self.program_name = Path(__file__).stem
-        self.program_version = "0.1.14"
+        self.program_version = "0.1.15"
         self.log_level = 'ERROR'
 
         logger.remove()
@@ -94,7 +94,7 @@ class WeeklyReport:
         }
         mask_plan_date = self.make_date_mask(_df, 'PLAN_DATE_END', self.begin_date, self.end_date)
         mask_prognoz_date = self.make_date_mask(_df, 'PROGNOZ_DATE', self.begin_date, self.end_date)
-        mask_fact_date = self.make_date_mask(_df, 'TRUNC(A.MIN_DATE_FACT)', self.begin_date, self.end_date)
+        mask_fact_date = self.make_date_mask(_df, 'MIN_DATE_FACT', self.begin_date, self.end_date)
         mask_check_fact = (_df['CHECK_FACT'] == 1)
 
         logger.debug(_df[mask_prognoz_date])
@@ -131,7 +131,8 @@ class WeeklyReport:
             'PROGNOZ_DATE': 'Прогнозная дата',
             'PROGNOZ_COMMENT': 'Комментарий к прогнозной дате',
             'RS_2023': 'RAN Sharing 2023',
-            'TRUNC(A.MIN_DATE_FACT)': 'Мин. дата запуска',
+            'MIN_DATE_FACT': 'Мин. дата запуска',
+            'MAX_DATE_FACT': 'Макс. дата запуска',
             'PROGRAM': 'Программа',
             'CHECK_FACT': 'Факт запуска',
             'RO_CLUSTER': 'Кластер',
@@ -151,7 +152,7 @@ class WeeklyReport:
             'PROGNOZ_COMMENT',
             'Сезонные',
             'RS_2023',
-            'TRUNC(A.MIN_DATE_FACT)',
+            'MIN_DATE_FACT',
         ]
 
         mask_rrl_build = df_kpi['BP_ESUP'] == 'Строительство РРЛ'

@@ -27,3 +27,4 @@ weekly_report_class.spec
 /build/weekly_report_class/weekly_report_class.pkg
 /weekly_report_class.spec
 /build/weekly_report_class/xref-weekly_report_class.html
+__pycache__/
