@@ -3,6 +3,7 @@ import datetime
 import locale
 import os
 import sys
+import calendar
 from pathlib import Path
 
 import pandas as pd
@@ -17,8 +18,10 @@ from MyLoggingException import MyLoggingException
 class WeeklyReport:
     def __init__(self):
         self.program_name = Path(__file__).stem
-        self.program_version = "0.1.15"
+        self.program_version = "0.1.16"
         self.log_level = 'ERROR'
+
+        today_datetime = datetime.datetime.now()
 
         logger.remove()
         logger.add(sys.stdout, level=self.log_level)
@@ -30,26 +33,28 @@ class WeeklyReport:
         self.args = self.parser.parse_args()
 
         if self.args.begin_date is None:
-            self.begin_date = datetime.date(datetime.date.today().year, datetime.date.today().month, 1)
-            save_begin_date = self.begin_date.strftime('%Y-%m-%d')
-            self.begin_date = self.begin_date.strftime('%Y-%m-%d %H:%M:%S')
+            self.begin_date = datetime.date(today_datetime.year, today_datetime.month, 1)
+            save_begin_date: str = self.begin_date.strftime('%Y-%m-%d')
+            # self.begin_date = self.begin_date.strftime('%Y-%m-%d %H:%M:%S')
         else:
-            save_begin_date = self.args.begin_date
-            self.begin_date = f'{self.args.begin_date} {datetime.time(hour=0, minute=0, second=0).strftime("%H:%M:%S")}'
+            save_begin_date: str = self.args.begin_date
+            split_begin_date: list[int] = list(map(int, save_begin_date.split('-')))
+            self.begin_date = datetime.datetime(year=split_begin_date[0],  month=split_begin_date[1], day=split_begin_date[2], hour=0, minute=0, second=0)
 
         # Дата конца анализа
         if self.args.end_date is None:
-            self.end_date = self.last_day_of_month(datetime.date(datetime.date.today().year, datetime.date.today().month, 1)).strftime('%Y-%m-%d')
-            save_end_date = self.end_date
-            self.end_date = f'{self.end_date} {datetime.time(hour=23, minute=59, second=59, microsecond=99999).strftime("%H:%M:%S")}'
+            self.end_date = datetime.datetime(year=today_datetime.year, month=today_datetime.month, day=calendar.monthrange(today_datetime.year, today_datetime.month)[1], hour=23, minute=59, second=59, microsecond=99999)
+            save_end_date = self.end_date.strftime('%Y-%m-%d')
         else:
             save_end_date = self.args.end_date
-            self.end_date = f'{self.args.end_date} {datetime.time(hour=23, minute=59, second=59, microsecond=99999).strftime("%H:%M:%S")}'
+            split_end_date: list[int] = list(map(int, save_end_date.split('-')))
+            self.end_date = datetime.datetime(year=split_end_date[0],  month=split_end_date[1], day=split_end_date[2], hour=23, minute=59, second=59, microsecond=99999)
+            # self.end_date = f'{self.args.end_date} {datetime.time(hour=23, minute=59, second=59, microsecond=99999).strftime("%H:%M:%S")}'
 
-        if datetime.datetime.fromisoformat(self.begin_date).year == datetime.datetime.fromisoformat(self.end_date).year:
-            self.process_year = [datetime.datetime.fromisoformat(self.begin_date).year]
+        if self.begin_date.year == self.end_date.year:
+            self.process_year = [self.begin_date.year]
         else:
-            self.process_year = [datetime.datetime.fromisoformat(self.begin_date).year, datetime.datetime.fromisoformat(self.end_date).year]
+            self.process_year = [self.begin_date.year, self.end_date.year]
 
         self.url = Path('//megafon.ru/KVK/KRN/Files/TelegrafFiles/ОПРС/!Проекты РЦРП/Блок №3/2023 год/MDP_22_23.xlsm')
         self.dir_name = Path('//megafon.ru/KVK', 'KRN', 'Files', 'TelegrafFiles', 'ОПРС', '!Проекты РЦРП', 'Блок №3', f'{datetime.datetime.today().year} год', 'Отчеты')
@@ -78,8 +83,10 @@ class WeeklyReport:
             raise MyLoggingException(f'Ошибка при получении данных: {ex}')
 
     @staticmethod
-    def make_date_mask(_df: DataFrame, column_name: str, _begin_date: str, _end_date: str) -> Series:
-        return (_df[column_name] >= pd.to_datetime(_begin_date, yearfirst=True)) & (_df[column_name] <= pd.to_datetime(_end_date, yearfirst=True))
+    def make_date_mask(_df: DataFrame, column_name: str, _begin_date: datetime, _end_date: datetime) -> Series:
+        # return (_df[column_name] >= pd.to_datetime(_begin_date)) & (_df[column_name] <= pd.to_datetime(_end_date))
+        _result = ((_df[column_name] >= _begin_date) & (_df[column_name] <= _end_date))
+        return _result
 
     def make_report(self, _df: DataFrame) -> DataFrame:
         delta_char = f'{chr(0x0394)}'
