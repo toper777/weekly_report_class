@@ -33,7 +33,7 @@ class WeeklyReport:
         self.args = self.parser.parse_args()
 
         if self.args.begin_date is None:
-            self.begin_date = datetime.date(today_datetime.year, today_datetime.month, 1)
+            self.begin_date = datetime.datetime(today_datetime.year, today_datetime.month, 1)
             save_begin_date: str = self.begin_date.strftime('%Y-%m-%d')
             # self.begin_date = self.begin_date.strftime('%Y-%m-%d %H:%M:%S')
         else:
