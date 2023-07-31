@@ -18,7 +18,7 @@ from MyLoggingException import MyLoggingException
 class WeeklyReport:
     def __init__(self):
         self.program_name = Path(__file__).stem
-        self.program_version = "0.1.16"
+        self.program_version = "0.1.17"
         self.log_level = 'ERROR'
 
         today_datetime = datetime.datetime.now()
@@ -120,6 +120,7 @@ class WeeklyReport:
         report_sheets = {
             'Всего БС': 'all_bs_report',
             'Новые БС': 'new_bs_report',
+            'Существующие БС': 'exist_bs_report',
             'РРЛ': 'rrl_report',
             'АП БС': 'ap_all_bs',
             'АП РРЛ': 'ap_rrl',
@@ -182,6 +183,10 @@ class WeeklyReport:
         df_new_bs = df_kpi[mask_check_plan & (mask_bs_build | mask_bs_rec | mask_bs_pico | mask_bs_dem) & mask_new_bs & mask_plan_year][report_columns]
         print(f'Создаем лист отчета: {Colors.GREEN}"Новые БС"{Colors.END}')
         wb.excel_format_table(self.make_report(df_new_bs), 'Новые БС', report_sheets['Новые БС'])
+
+        df_exist_bs = df_kpi[mask_check_plan & (mask_bs_build | mask_bs_rec | mask_bs_pico | mask_bs_dem) & ~mask_new_bs & mask_plan_year][report_columns]
+        print(f'Создаем лист отчета: {Colors.GREEN}"Существующие БС"{Colors.END}')
+        wb.excel_format_table(self.make_report(df_exist_bs), 'Существующие БС', report_sheets['Существующие БС'])
 
         df_rrl = df_kpi[mask_check_plan & (mask_rrl_build | mask_rrl_rec) & mask_plan_year][report_columns]
         print(f'Создаем лист отчета: {Colors.GREEN}"РРЛ"{Colors.END}')
