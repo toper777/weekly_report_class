@@ -18,7 +18,7 @@ from MyLoggingException import MyLoggingException
 class WeeklyReport:
     def __init__(self):
         self.program_name = Path(__file__).stem
-        self.program_version = "0.1.18"
+        self.program_version = "0.1.19"
         self.log_level = 'ERROR'
 
         today_datetime = datetime.datetime.now()
@@ -56,15 +56,17 @@ class WeeklyReport:
         else:
             self.process_year = [self.begin_date.year, self.end_date.year]
 
-        self.url = Path('//megafon.ru/KVK/KRN/Files/TelegrafFiles/ОПРС/!Проекты РЦРП/Блок №3/2023 год/MDP_22_23.xlsm')
+        # self.url = Path('//megafon.ru/KVK/KRN/Files/TelegrafFiles/ОПРС/!Проекты РЦРП/Блок №3/2023 год/MDP_22_23.xlsm')
+        self.url = Path('c:/tmp/MDP_22_23.xlsm')
         self.dir_name = Path('//megafon.ru/KVK', 'KRN', 'Files', 'TelegrafFiles', 'ОПРС', '!Проекты РЦРП', 'Блок №3', f'{datetime.datetime.today().year} год', 'Отчеты')
-        self.sheets = ['Массив']
+        self.sheets = ['Массив', 'mdp_upload_date']
         if self.args.dont_save_ap:
             self.report_file = Path(self.dir_name, f'{datetime.date.today().strftime("%Y%m%d")} Отчет по выполнению мероприятий КФ [{save_begin_date} - {save_end_date}].xlsx')
         else:
             self.report_file = Path(self.dir_name, f'{datetime.date.today().strftime("%Y%m%d")} Отчет по выполнению мероприятий КФ [{save_begin_date} - {save_end_date}] [АП].xlsx')
         self.not_done_file = Path(self.dir_name, 'Риски ВОЛС.xlsx')
         self.region_obligations_file = self.not_done_file = Path(self.dir_name, 'Обязательства регионов.xlsx')
+        self.upload_date: DataFrame = None
 
     @staticmethod
     def last_day_of_month(_date: datetime) -> datetime:
@@ -81,6 +83,11 @@ class WeeklyReport:
             raise MyLoggingException(f'Файл {self.url} не существует. Ошибка {ex}')
         except Exception as ex:
             raise MyLoggingException(f'Ошибка при получении данных: {ex}')
+
+
+    def get_upload_date(self):
+        pass
+
 
     @staticmethod
     def make_date_mask(_df: DataFrame, column_name: str, _begin_date: datetime, _end_date: datetime) -> Series:
@@ -125,9 +132,16 @@ class WeeklyReport:
             'РРЛ': 'rrl_report',
             'АП БС': 'ap_all_bs',
             'АП РРЛ': 'ap_rrl',
+            'Дата выгрузки данных': 'upload_date'
         }
 
         wb = FormattedWorkbook(logging_level=self.log_level)
+
+        if self.upload_date is not None:
+            name_of_upload = 'Дата выгрузки данных'
+            self.upload_date = self.upload_date.rename({'DATE_UPLOAD': name_of_upload})
+            print(f'Создаем лист отчета: {Colors.GREEN}"{name_of_upload}"{Colors.END}')
+            wb.excel_format_table(self.upload_date, name_of_upload, report_sheets[name_of_upload])
 
         rename_columns = {
             'ID_ESUP': 'ЕСУП ID',
@@ -236,5 +250,7 @@ if __name__ == '__main__':
     wr = WeeklyReport()
     print(f'{wr.program_name} v.{wr.program_version}')
     df = wr.get_data()
+    if df.__len__() > 1:
+        wr.upload_date = df[wr.sheets[1]]
     work_book = wr.report_kpi(df[wr.sheets[0]])
     wr.save_report(work_book)
