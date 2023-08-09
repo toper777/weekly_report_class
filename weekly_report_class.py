@@ -139,7 +139,7 @@ class WeeklyReport:
 
         if self.upload_date is not None:
             name_of_upload = 'Дата выгрузки данных'
-            self.upload_date = self.upload_date.rename({'DATE_UPLOAD': name_of_upload})
+            self.upload_date = self.upload_date.rename(columns={'DATE_UPLOAD': name_of_upload})
             print(f'Создаем лист отчета: {Colors.GREEN}"{name_of_upload}"{Colors.END}')
             wb.excel_format_table(self.upload_date, name_of_upload, report_sheets[name_of_upload])
 
