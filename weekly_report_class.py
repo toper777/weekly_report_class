@@ -56,8 +56,8 @@ class WeeklyReport:
         else:
             self.process_year = [self.begin_date.year, self.end_date.year]
 
-        # self.url = Path('//megafon.ru/KVK/KRN/Files/TelegrafFiles/ОПРС/!Проекты РЦРП/Блок №3/2023 год/MDP_22_23.xlsm')
-        self.url = Path('c:/tmp/MDP_22_23.xlsm')
+        self.url = Path('//megafon.ru/KVK/KRN/Files/TelegrafFiles/ОПРС/!Проекты РЦРП/Блок №3/2023 год/MDP_22_23.xlsm')
+        # self.url = Path('c:/tmp/MDP_22_23.xlsm')
         self.dir_name = Path('//megafon.ru/KVK', 'KRN', 'Files', 'TelegrafFiles', 'ОПРС', '!Проекты РЦРП', 'Блок №3', f'{datetime.datetime.today().year} год', 'Отчеты')
         self.sheets = ['Массив', 'mdp_upload_date']
         if self.args.dont_save_ap:
