@@ -1,5 +1,6 @@
 import argparse
 import datetime
+import io
 import locale
 import os
 import sys
@@ -18,7 +19,7 @@ from MyLoggingException import MyLoggingException
 class WeeklyReport:
     def __init__(self):
         self.program_name = Path(__file__).stem
-        self.program_version = "0.1.19"
+        self.program_version = "0.2.0"
         self.log_level = 'ERROR'
 
         today_datetime = datetime.datetime.now()
@@ -77,7 +78,9 @@ class WeeklyReport:
     def get_data(self) -> dict[str, DataFrame]:
         try:
             print(f'Получение данных из файла {Colors.GREEN}"{self.url}"{Colors.END}')
-            _df = pd.read_excel(self.url, sheet_name=self.sheets)
+            with open(self.url, 'rb') as f:
+                g = io.BytesIO(f.read())
+            _df = pd.read_excel(g.read(), sheet_name=self.sheets)
             return _df
         except FileNotFoundError as ex:
             raise MyLoggingException(f'Файл {self.url} не существует. Ошибка {ex}')
