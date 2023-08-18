@@ -19,7 +19,7 @@ from MyLoggingException import MyLoggingException
 class WeeklyReport:
     def __init__(self):
         self.program_name = Path(__file__).stem
-        self.program_version = "0.2.0"
+        self.program_version = "0.2.1"
         self.log_level = 'ERROR'
 
         today_datetime = datetime.datetime.now()
@@ -77,19 +77,19 @@ class WeeklyReport:
 
     def get_data(self) -> dict[str, DataFrame]:
         try:
+            if (datetime.datetime.now() - datetime.datetime.fromtimestamp(os.stat(self.url).st_mtime)) > datetime.timedelta(hours=3):
+                if input(f'{Colors.RED}Файл {self.url} старше 3 часов! Хотите продолжить обработку данных (y/n)?{Colors.END}').lower() != 'y':
+                    sys.exit(12)
             print(f'Получение данных из файла {Colors.GREEN}"{self.url}"{Colors.END}')
             with open(self.url, 'rb') as f:
                 g = io.BytesIO(f.read())
-            _df = pd.read_excel(g.read(), sheet_name=self.sheets)
+            _df = pd.read_excel(g.getvalue(), sheet_name=self.sheets)
+            g.close()
             return _df
         except FileNotFoundError as ex:
             raise MyLoggingException(f'Файл {self.url} не существует. Ошибка {ex}')
         except Exception as ex:
             raise MyLoggingException(f'Ошибка при получении данных: {ex}')
-
-
-    def get_upload_date(self):
-        pass
 
 
     @staticmethod
