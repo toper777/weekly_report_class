@@ -19,7 +19,7 @@ from MyLoggingException import MyLoggingException
 class WeeklyReport:
     def __init__(self):
         self.program_name = Path(__file__).stem
-        self.program_version = "0.2.1"
+        self.program_version = "0.2.2"
         self.log_level = 'ERROR'
 
         today_datetime = datetime.datetime.now()
@@ -162,6 +162,7 @@ class WeeklyReport:
             'PROGRAM': 'Программа',
             'CHECK_FACT': 'Факт запуска',
             'RO_CLUSTER': 'Кластер',
+            'build_priority': 'Приоритет',
         }
 
         report_columns = [
@@ -178,6 +179,8 @@ class WeeklyReport:
             'PROGNOZ_COMMENT',
             'Сезонные',
             'RS_2023',
+            'VIP',
+            'build_priority',
             'MIN_DATE_FACT',
         ]
 
@@ -215,7 +218,7 @@ class WeeklyReport:
             for sheet_name, df_name in [["АП БС", df_all_bs],["АП РРЛ", df_rrl]]:
                 mask_prognoz_date = self.make_date_mask(df_name, 'PROGNOZ_DATE', self.begin_date, self.end_date)
                 print(f'Создаем лист отчета: {Colors.GREEN}"{sheet_name}"{Colors.END}')
-                _df = df_name[mask_prognoz_date].rename(columns=rename_columns)
+                _df = df_name[mask_prognoz_date].sort_values(by=['build_priority', 'RO']).rename(columns=rename_columns)
                 wb.excel_format_table(_df, sheet_name, report_sheets[sheet_name])
 
         return wb
