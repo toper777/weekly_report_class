@@ -19,7 +19,7 @@ from MyLoggingException import MyLoggingException
 class WeeklyReport:
     def __init__(self):
         self.program_name = Path(__file__).stem
-        self.program_version = "0.2.2"
+        self.program_version = "0.2.3"
         self.log_level = 'ERROR'
 
         today_datetime = datetime.datetime.now()
@@ -254,7 +254,7 @@ if __name__ == '__main__':
     locale.setlocale(locale.LC_ALL, '')
 
     wr = WeeklyReport()
-    print(f'{wr.program_name} v.{wr.program_version}')
+    print(f'{Colors.DARKCYAN}{datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S")}:{Colors.END} {wr.program_name} v.{wr.program_version}')
     df = wr.get_data()
     if df.__len__() > 1:
         wr.upload_date = df[wr.sheets[1]]
