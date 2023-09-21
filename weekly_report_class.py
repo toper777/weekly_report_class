@@ -9,7 +9,6 @@ from pathlib import Path
 
 import pandas as pd
 from loguru import logger
-from pandas import DataFrame, Series
 
 from Colors import Colors
 from FormattedWorkbook import FormattedWorkbook
@@ -19,7 +18,7 @@ from MyLoggingException import MyLoggingException
 class WeeklyReport:
     def __init__(self):
         self.program_name = Path(__file__).stem
-        self.program_version = "0.2.3"
+        self.program_version = "0.2.4"
         self.log_level = 'ERROR'
 
         today_datetime = datetime.datetime.now()
@@ -67,7 +66,7 @@ class WeeklyReport:
             self.report_file = Path(self.dir_name, f'{datetime.date.today().strftime("%Y%m%d")} Отчет по выполнению мероприятий КФ [{save_begin_date} - {save_end_date}] [АП].xlsx')
         self.not_done_file = Path(self.dir_name, 'Риски ВОЛС.xlsx')
         self.region_obligations_file = self.not_done_file = Path(self.dir_name, 'Обязательства регионов.xlsx')
-        self.upload_date: DataFrame = None
+        self.upload_date: pd.DataFrame = None
 
     @staticmethod
     def last_day_of_month(_date: datetime) -> datetime:
@@ -75,7 +74,7 @@ class WeeklyReport:
             return _date.replace(day=31)
         return _date.replace(month=_date.month + 1, day=1) - datetime.timedelta(days=1)
 
-    def get_data(self) -> dict[str, DataFrame]:
+    def get_data(self) -> dict[str, pd.DataFrame]:
         try:
             if (datetime.datetime.now() - datetime.datetime.fromtimestamp(os.stat(self.url).st_mtime)) > datetime.timedelta(hours=3):
                 if input(f'{Colors.RED}Файл {self.url} старше 3 часов! Хотите продолжить обработку данных (y/n)?{Colors.END}').lower() != 'y':
@@ -93,12 +92,12 @@ class WeeklyReport:
 
 
     @staticmethod
-    def make_date_mask(_df: DataFrame, column_name: str, _begin_date: datetime, _end_date: datetime) -> Series:
+    def make_date_mask(_df: pd.DataFrame, column_name: str, _begin_date: datetime, _end_date: datetime) -> pd.Series:
         # return (_df[column_name] >= pd.to_datetime(_begin_date)) & (_df[column_name] <= pd.to_datetime(_end_date))
         _result = ((_df[column_name] >= _begin_date) & (_df[column_name] <= _end_date))
         return _result
 
-    def make_report(self, _df: DataFrame) -> DataFrame:
+    def make_report(self, _df: pd.DataFrame) -> pd.DataFrame:
         delta_char = f'{chr(0x0394)}'
         _df[['PROGNOZ_DATE', 'PLAN_DATE_END']] = _df[['PROGNOZ_DATE', 'PLAN_DATE_END']].apply(pd.to_datetime)
 
@@ -127,7 +126,7 @@ class WeeklyReport:
         _df.at["total", 'Регион'] = "ИТОГО:"
         return _df
 
-    def report_kpi(self, df_kpi: DataFrame) -> FormattedWorkbook:
+    def report_kpi(self, df_kpi: pd.DataFrame) -> FormattedWorkbook:
         report_sheets = {
             'Всего БС': 'all_bs_report',
             'Новые БС': 'new_bs_report',
