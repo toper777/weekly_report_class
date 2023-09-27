@@ -18,7 +18,7 @@ from MyLoggingException import MyLoggingException
 class WeeklyReport:
     def __init__(self):
         self.program_name = Path(__file__).stem
-        self.program_version = "0.2.4"
+        self.program_version = "0.2.5"
         self.log_level = 'ERROR'
 
         today_datetime = datetime.datetime.now()
@@ -30,6 +30,8 @@ class WeeklyReport:
         self.parser.add_argument("-b", "--begin-date", type=str, help="Дата начала периода анализа формат YYYY-MM-DD")
         self.parser.add_argument("-e", "--end-date", type=str, help="Дата окончания периода анализа формат YYYY-MM-DD")
         self.parser.add_argument("--dont-save-ap", action='store_true', help="Не сохранять адресные планы вместе с отчетом")
+        self.parser.add_argument("-s", "--source-file", help="Файл с данными")
+        self.parser.add_argument("-r", "--report-file", help="Имя файла с отчетом. Должен иметь расширение .xlsx")
         self.args = self.parser.parse_args()
 
         if self.args.begin_date is None:
@@ -56,14 +58,29 @@ class WeeklyReport:
         else:
             self.process_year = [self.begin_date.year, self.end_date.year]
 
-        self.url = Path('//megafon.ru/KVK/KRN/Files/TelegrafFiles/ОПРС/!Проекты РЦРП/Блок №3/2023 год/MDP_22_23.xlsm')
-        # self.url = Path('c:/tmp/MDP_22_23.xlsm')
-        self.dir_name = Path('//megafon.ru/KVK', 'KRN', 'Files', 'TelegrafFiles', 'ОПРС', '!Проекты РЦРП', 'Блок №3', f'{datetime.datetime.today().year} год', 'Отчеты')
-        self.sheets = ['Массив', 'mdp_upload_date']
-        if self.args.dont_save_ap:
-            self.report_file = Path(self.dir_name, f'{datetime.date.today().strftime("%Y%m%d")} Отчет по выполнению мероприятий КФ [{save_begin_date} - {save_end_date}].xlsx')
+        if self.args.source_file is None:
+            self.url = Path('//megafon.ru/KVK/KRN/Files/TelegrafFiles/ОПРС/!Проекты РЦРП/Блок №3/2023 год/MDP_22_23.xlsm')
         else:
-            self.report_file = Path(self.dir_name, f'{datetime.date.today().strftime("%Y%m%d")} Отчет по выполнению мероприятий КФ [{save_begin_date} - {save_end_date}] [АП].xlsx')
+            if Path(self.args.source_file).is_file():
+                self.url = self.args.source_file
+            else:
+                print(f'{Colors.RED}Файл с данные {self.args.source_file} не найден{Colors.END}')
+                sys.exit(130)
+
+        if self.args.report_file is None:
+            self.dir_name = Path('//megafon.ru/KVK', 'KRN', 'Files', 'TelegrafFiles', 'ОПРС', '!Проекты РЦРП', 'Блок №3', f'{datetime.datetime.today().year} год', 'Отчеты')
+            if self.args.dont_save_ap:
+                self.report_file = Path(self.dir_name, f'{datetime.date.today().strftime("%Y%m%d")} Отчет по выполнению мероприятий КФ [{save_begin_date} - {save_end_date}].xlsx')
+            else:
+                self.report_file = Path(self.dir_name, f'{datetime.date.today().strftime("%Y%m%d")} Отчет по выполнению мероприятий КФ [{save_begin_date} - {save_end_date}] [АП].xlsx')
+        else:
+            if os.access(Path(self.args.report_file), os.W_OK):
+                self.report_file = Path(self.args.report_file)
+            else:
+                print(f'{Colors.RED}Не могу записать файл отчета {self.args.report_file}{Colors.END}')
+                sys.exit(140)
+
+        self.sheets = ['Массив', 'mdp_upload_date']
         self.not_done_file = Path(self.dir_name, 'Риски ВОЛС.xlsx')
         self.region_obligations_file = self.not_done_file = Path(self.dir_name, 'Обязательства регионов.xlsx')
         self.upload_date: pd.DataFrame = None
@@ -93,7 +110,6 @@ class WeeklyReport:
 
     @staticmethod
     def make_date_mask(_df: pd.DataFrame, column_name: str, _begin_date: datetime, _end_date: datetime) -> pd.Series:
-        # return (_df[column_name] >= pd.to_datetime(_begin_date)) & (_df[column_name] <= pd.to_datetime(_end_date))
         _result = ((_df[column_name] >= _begin_date) & (_df[column_name] <= _end_date))
         return _result
 
@@ -110,8 +126,6 @@ class WeeklyReport:
         }
         mask_plan_date = self.make_date_mask(_df, 'PLAN_DATE_END', self.begin_date, self.end_date)
         mask_prognoz_date = self.make_date_mask(_df, 'PROGNOZ_DATE', self.begin_date, self.end_date)
-        # mask_fact_date = self.make_date_mask(_df, 'MIN_DATE_FACT', self.begin_date, self.end_date)
-        # mask_fact_exist = (_df['MIN_DATE_FACT'].notnull())
         mask_check_fact = (_df['CHECK_FACT'] == 1)
 
         logger.debug(_df[mask_prognoz_date])
@@ -251,7 +265,6 @@ class WeeklyReport:
 
 if __name__ == '__main__':
     locale.setlocale(locale.LC_ALL, '')
-
     wr = WeeklyReport()
     print(f'{Colors.DARKCYAN}{datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S")}:{Colors.END} {wr.program_name} v.{wr.program_version}')
     df = wr.get_data()
