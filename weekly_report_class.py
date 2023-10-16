@@ -18,7 +18,7 @@ from MyLoggingException import MyLoggingException
 class WeeklyReport:
     def __init__(self):
         self.program_name = Path(__file__).stem
-        self.program_version = "0.2.5"
+        self.program_version = "0.2.6"
         self.log_level = 'ERROR'
 
         today_datetime = datetime.datetime.now()
@@ -59,7 +59,7 @@ class WeeklyReport:
             self.process_year = [self.begin_date.year, self.end_date.year]
 
         if self.args.source_file is None:
-            self.url = Path('//megafon.ru/KVK/KRN/Files/TelegrafFiles/ОПРС/!Проекты РЦРП/Блок №3/2023 год/MDP_22_23.xlsm')
+            self.url = Path('//megafon.ru/KVK/KRN/Files/TelegrafFiles/ОПРС/!Проекты РЦРП/Блок №3/2023 год/MDP_23_24.xlsm')
         else:
             if Path(self.args.source_file).is_file():
                 self.url = self.args.source_file
@@ -126,12 +126,13 @@ class WeeklyReport:
         }
         mask_plan_date = self.make_date_mask(_df, 'PLAN_DATE_END', self.begin_date, self.end_date)
         mask_prognoz_date = self.make_date_mask(_df, 'PROGNOZ_DATE', self.begin_date, self.end_date)
+        mask_fact_date = self.make_date_mask(_df, 'MIN_DATE_FACT', self.begin_date, self.end_date)
         mask_check_fact = (_df['CHECK_FACT'] == 1)
 
         logger.debug(_df[mask_prognoz_date])
         df_plan = _df[mask_plan_date].groupby(['RO_CLUSTER', 'RO']).agg({'PLAN_DATE_END': 'count', }).reset_index()
         df_prognoz = _df[mask_prognoz_date].groupby(['RO_CLUSTER', 'RO']).agg({'PROGNOZ_DATE': 'count', }).reset_index()
-        df_fact = _df[mask_prognoz_date & mask_check_fact].groupby(['RO_CLUSTER', 'RO']).agg({'CHECK_FACT': 'count', }).reset_index()
+        df_fact = _df[mask_fact_date & mask_check_fact].groupby(['RO_CLUSTER', 'RO']).agg({'CHECK_FACT': 'count', }).reset_index()
 
         _df = pd.merge(df_plan, pd.merge(df_prognoz, df_fact, how='outer', sort=True), how='outer', sort=True).fillna(value=0).sort_values(by='RO_CLUSTER').rename(columns=rename_columns)
 
