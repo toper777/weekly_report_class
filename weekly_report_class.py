@@ -5,7 +5,7 @@ import locale
 import os
 import sys
 import calendar
-from pathlib import Path
+from pathlib import Path, PurePath
 
 import pandas as pd
 from loguru import logger
@@ -18,7 +18,7 @@ from MyLoggingException import MyLoggingException
 class WeeklyReport:
     def __init__(self):
         self.program_name = Path(__file__).stem
-        self.program_version = "0.2.6"
+        self.program_version = "0.2.7"
         self.log_level = 'ERROR'
 
         today_datetime = datetime.datetime.now()
@@ -74,8 +74,9 @@ class WeeklyReport:
             else:
                 self.report_file = Path(self.dir_name, f'{datetime.date.today().strftime("%Y%m%d")} Отчет по выполнению мероприятий КФ [{save_begin_date} - {save_end_date}] [АП].xlsx')
         else:
-            if os.access(Path(self.args.report_file), os.W_OK):
+            if os.access(PurePath(self.args.report_file).parents[0], os.W_OK):
                 self.report_file = Path(self.args.report_file)
+                self.dir_name = PurePath(self.args.report_file).parents[0]
             else:
                 print(f'{Colors.RED}Не могу записать файл отчета {self.args.report_file}{Colors.END}')
                 sys.exit(140)
@@ -147,8 +148,12 @@ class WeeklyReport:
             'Новые БС': 'new_bs_report',
             'Существующие БС': 'exist_bs_report',
             'РРЛ': 'rrl_report',
+            'Энерго': 'energy_report',
+            'Климатика': 'climate_report',
             'АП БС': 'ap_all_bs',
             'АП РРЛ': 'ap_rrl',
+            'АП Энерго': 'ap_energy',
+            'АП Климатика': 'ap_climate',
             'Дата выгрузки данных': 'upload_date'
         }
 
@@ -204,6 +209,9 @@ class WeeklyReport:
         mask_bs_rec = df_kpi['BP_ESUP'] == 'Переоборудование БС'
         mask_bs_pico = df_kpi['BP_ESUP'] == 'Pico Cell_Включение'
         mask_bs_dem = df_kpi['BP_ESUP'] == 'Демонтаж БС/АМС'
+        mask_energo = df_kpi['BP_ESUP'] == 'Модернизация энергоснабжения'
+        mask_climate = df_kpi['BP_ESUP'] == 'Модернизация климатического оборудования'
+
         if self.process_year.__len__() == 2:
             mask_plan_year = (df_kpi['PLAN_YEAR'] == self.process_year[0]) | (df_kpi['PLAN_YEAR'] == self.process_year[1])
         else:
@@ -227,9 +235,17 @@ class WeeklyReport:
         print(f'Создаем лист отчета: {Colors.GREEN}"РРЛ"{Colors.END}')
         wb.excel_format_table(self.make_report(df_rrl), 'РРЛ', report_sheets['РРЛ'])
 
+        df_energy = df_kpi[mask_check_plan & mask_energo & mask_plan_year][report_columns]
+        print(f'Создаем лист отчета: {Colors.GREEN}"Энерго"{Colors.END}')
+        wb.excel_format_table(self.make_report(df_energy), 'Энерго', report_sheets['Энерго'])
+
+        df_climate = df_kpi[mask_check_plan & mask_climate & mask_plan_year][report_columns]
+        print(f'Создаем лист отчета: {Colors.GREEN}"Климатика"{Colors.END}')
+        wb.excel_format_table(self.make_report(df_climate), 'Климатика', report_sheets['Климатика'])
+
         if not self.args.dont_save_ap:
             # Сохраняем АП
-            for sheet_name, df_name in [["АП БС", df_all_bs],["АП РРЛ", df_rrl]]:
+            for sheet_name, df_name in [["АП БС", df_all_bs], ["АП РРЛ", df_rrl], ["АП Энерго", df_energy], ["АП Климатика", df_climate]]:
                 mask_prognoz_date = self.make_date_mask(df_name, 'PROGNOZ_DATE', self.begin_date, self.end_date)
                 print(f'Создаем лист отчета: {Colors.GREEN}"{sheet_name}"{Colors.END}')
                 _df = df_name[mask_prognoz_date].sort_values(by=['build_priority', 'RO']).rename(columns=rename_columns)
