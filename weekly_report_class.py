@@ -18,7 +18,7 @@ from MyLoggingException import MyLoggingException
 class WeeklyReport:
     def __init__(self):
         self.program_name = Path(__file__).stem
-        self.program_version = "0.2.7"
+        self.program_version = "0.2.8"
         self.log_level = 'ERROR'
 
         today_datetime = datetime.datetime.now()
@@ -81,6 +81,7 @@ class WeeklyReport:
                 print(f'{Colors.RED}Не могу записать файл отчета {self.args.report_file}{Colors.END}')
                 sys.exit(140)
 
+        self.end_of_the_year = datetime.datetime(year=self.end_date.year, month=12, day=31, hour=23, minute=59, second=59, microsecond=99999)
         self.sheets = ['Массив', 'mdp_upload_date']
         self.not_done_file = Path(self.dir_name, 'Риски ВОЛС.xlsx')
         self.region_obligations_file = self.not_done_file = Path(self.dir_name, 'Обязательства регионов.xlsx')
@@ -124,18 +125,22 @@ class WeeklyReport:
             'CHECK_FACT': 'Факт',
             'PLAN_DATE_END': 'MDP План',
             'RO_CLUSTER': 'Кластер',
+            'VIDACHA': 'Выдача',
         }
         mask_plan_date = self.make_date_mask(_df, 'PLAN_DATE_END', self.begin_date, self.end_date)
         mask_prognoz_date = self.make_date_mask(_df, 'PROGNOZ_DATE', self.begin_date, self.end_date)
         mask_fact_date = self.make_date_mask(_df, 'MIN_DATE_FACT', self.begin_date, self.end_date)
+        mask_vidacha_date = self.make_date_mask(_df, 'PROGNOZ_DATE', self.begin_date, self.end_of_the_year)
         mask_check_fact = (_df['CHECK_FACT'] == 1)
+        mask_check_vidacha = (_df['VIDACHA'] == 1)
 
         logger.debug(_df[mask_prognoz_date])
         df_plan = _df[mask_plan_date].groupby(['RO_CLUSTER', 'RO']).agg({'PLAN_DATE_END': 'count', }).reset_index()
         df_prognoz = _df[mask_prognoz_date].groupby(['RO_CLUSTER', 'RO']).agg({'PROGNOZ_DATE': 'count', }).reset_index()
         df_fact = _df[mask_fact_date & mask_check_fact].groupby(['RO_CLUSTER', 'RO']).agg({'CHECK_FACT': 'count', }).reset_index()
+        df_vidacha = _df[mask_vidacha_date & mask_check_vidacha].groupby(['RO_CLUSTER', 'RO']).agg({'VIDACHA': 'count', }).reset_index()
 
-        _df = pd.merge(df_plan, pd.merge(df_prognoz, df_fact, how='outer', sort=True), how='outer', sort=True).fillna(value=0).sort_values(by='RO_CLUSTER').rename(columns=rename_columns)
+        _df = pd.merge(df_plan, pd.merge(df_prognoz, pd.merge(df_vidacha, df_fact, how='outer', sort=True), how='outer', sort=True), how='outer', sort=True).fillna(value=0).sort_values(by='RO_CLUSTER').rename(columns=rename_columns)
 
         _df[delta_char] = _df['Факт'] - _df['Прогноз']
         _df.loc["total"] = _df.sum(numeric_only=True)
@@ -182,6 +187,7 @@ class WeeklyReport:
             'CHECK_FACT': 'Факт запуска',
             'RO_CLUSTER': 'Кластер',
             'build_priority': 'Приоритет',
+            'VYDACHA': 'Выдача оборудования',
         }
 
         report_columns = [
@@ -201,6 +207,7 @@ class WeeklyReport:
             'VIP',
             'build_priority',
             'MIN_DATE_FACT',
+            'VIDACHA',
         ]
 
         mask_rrl_build = df_kpi['BP_ESUP'] == 'Строительство РРЛ'
