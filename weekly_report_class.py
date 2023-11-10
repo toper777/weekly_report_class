@@ -18,7 +18,7 @@ from MyLoggingException import MyLoggingException
 class WeeklyReport:
     def __init__(self):
         self.program_name = Path(__file__).stem
-        self.program_version = "0.2.8"
+        self.program_version = "0.2.9"
         self.log_level = 'ERROR'
 
         today_datetime = datetime.datetime.now()
@@ -187,7 +187,7 @@ class WeeklyReport:
             'CHECK_FACT': 'Факт запуска',
             'RO_CLUSTER': 'Кластер',
             'build_priority': 'Приоритет',
-            'VYDACHA': 'Выдача оборудования',
+            'VIDACHA': 'Выдача оборудования',
         }
 
         report_columns = [
@@ -202,7 +202,6 @@ class WeeklyReport:
             'PLAN_DATE_END',
             'PROGNOZ_DATE',
             'PROGNOZ_COMMENT',
-            'Сезонные',
             'RS_2023',
             'VIP',
             'build_priority',
