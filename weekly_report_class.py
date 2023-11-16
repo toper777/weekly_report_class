@@ -18,7 +18,7 @@ from MyLoggingException import MyLoggingException
 class WeeklyReport:
     def __init__(self):
         self.program_name = Path(__file__).stem
-        self.program_version = "0.2.9"
+        self.program_version = "0.2.10"
         self.log_level = 'ERROR'
 
         today_datetime = datetime.datetime.now()
@@ -95,8 +95,9 @@ class WeeklyReport:
 
     def get_data(self) -> dict[str, pd.DataFrame]:
         try:
-            if (datetime.datetime.now() - datetime.datetime.fromtimestamp(os.stat(self.url).st_mtime)) > datetime.timedelta(hours=3):
-                if input(f'{Colors.RED}Файл {self.url} старше 3 часов! Хотите продолжить обработку данных (y/n)?{Colors.END}').lower() != 'y':
+            data_update_age = datetime.datetime.now() - datetime.datetime.fromtimestamp(os.stat(self.url).st_mtime)
+            if data_update_age > datetime.timedelta(hours=3):
+                if input(f'{Colors.RED}Файл {self.url} обновлялся {(data_update_age.days*24 + data_update_age.seconds/3600):.2f} часов назад! Хотите продолжить обработку данных (y/N)?{Colors.END}').lower() != 'y':
                     sys.exit(12)
             print(f'Получение данных из файла {Colors.GREEN}"{self.url}"{Colors.END}')
             with open(self.url, 'rb') as f:
