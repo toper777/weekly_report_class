@@ -18,7 +18,7 @@ from MyLoggingException import MyLoggingException
 class WeeklyReport:
     def __init__(self):
         self.program_name = Path(__file__).stem
-        self.program_version = "0.2.11"
+        self.program_version = "0.2.12"
         self.log_level = 'ERROR'
 
         today_datetime = datetime.datetime.now()
@@ -230,28 +230,31 @@ class WeeklyReport:
             mask_plan_year = df_kpi['PLAN_YEAR'] == self.process_year[0]
         mask_new_bs = df_kpi['CHECK_NEW_PLAN'] == 'Новая'
         mask_check_plan = df_kpi['CHECK_PLAN'] == 'Да'
+        mask_2024_2023_boost = df_kpi['PROGRAM'] == "КФ. Развитие регионов_Ускоренные запуски 2024. 2023"
 
-        df_all_bs = df_kpi[mask_check_plan & (mask_bs_build | mask_bs_rec | mask_bs_pico | mask_bs_dem) & mask_plan_year][report_columns]
+        mask_check_plan_2023 = mask_check_plan | mask_2024_2023_boost
+
+        df_all_bs = df_kpi[mask_check_plan_2023 & (mask_bs_build | mask_bs_rec | mask_bs_pico | mask_bs_dem) & mask_plan_year][report_columns]
         print(f'Создаем лист отчета: {Colors.GREEN}"Всего БС"{Colors.END}')
         wb.excel_format_table(self.make_report(df_all_bs), 'Всего БС', report_sheets['Всего БС'])
 
-        df_new_bs = df_kpi[mask_check_plan & (mask_bs_build | mask_bs_rec | mask_bs_pico | mask_bs_dem) & mask_new_bs & mask_plan_year][report_columns]
+        df_new_bs = df_kpi[mask_check_plan_2023 & (mask_bs_build | mask_bs_rec | mask_bs_pico | mask_bs_dem) & mask_new_bs & mask_plan_year][report_columns]
         print(f'Создаем лист отчета: {Colors.GREEN}"Новые БС"{Colors.END}')
         wb.excel_format_table(self.make_report(df_new_bs), 'Новые БС', report_sheets['Новые БС'])
 
-        df_exist_bs = df_kpi[mask_check_plan & (mask_bs_build | mask_bs_rec | mask_bs_pico | mask_bs_dem) & ~mask_new_bs & mask_plan_year][report_columns]
+        df_exist_bs = df_kpi[mask_check_plan_2023 & (mask_bs_build | mask_bs_rec | mask_bs_pico | mask_bs_dem) & ~mask_new_bs & mask_plan_year][report_columns]
         print(f'Создаем лист отчета: {Colors.GREEN}"Существующие БС"{Colors.END}')
         wb.excel_format_table(self.make_report(df_exist_bs), 'Существующие БС', report_sheets['Существующие БС'])
 
-        df_rrl = df_kpi[mask_check_plan & (mask_rrl_build | mask_rrl_rec) & mask_plan_year][report_columns]
+        df_rrl = df_kpi[mask_check_plan_2023 & (mask_rrl_build | mask_rrl_rec) & mask_plan_year][report_columns]
         print(f'Создаем лист отчета: {Colors.GREEN}"РРЛ"{Colors.END}')
         wb.excel_format_table(self.make_report(df_rrl), 'РРЛ', report_sheets['РРЛ'])
 
-        df_energy = df_kpi[mask_check_plan & mask_energo & mask_plan_year][report_columns]
+        df_energy = df_kpi[mask_check_plan_2023 & mask_energo & mask_plan_year][report_columns]
         print(f'Создаем лист отчета: {Colors.GREEN}"Энерго"{Colors.END}')
         wb.excel_format_table(self.make_report(df_energy), 'Энерго', report_sheets['Энерго'])
 
-        df_climate = df_kpi[mask_check_plan & mask_climate & mask_plan_year][report_columns]
+        df_climate = df_kpi[mask_check_plan_2023 & mask_climate & mask_plan_year][report_columns]
         print(f'Создаем лист отчета: {Colors.GREEN}"Климатика"{Colors.END}')
         wb.excel_format_table(self.make_report(df_climate), 'Климатика', report_sheets['Климатика'])
 
