@@ -18,7 +18,7 @@ from MyLoggingException import MyLoggingException
 class WeeklyReport:
     def __init__(self):
         self.program_name = Path(__file__).stem
-        self.program_version = "0.2.12"
+        self.program_version = "0.2.13"
         self.log_level = 'ERROR'
 
         today_datetime = datetime.datetime.now()
@@ -59,7 +59,7 @@ class WeeklyReport:
             self.process_year = [self.begin_date.year, self.end_date.year]
 
         if self.args.source_file is None:
-            self.url = Path('//megafon.ru/KVK/KRN/Files/TelegrafFiles/ОПРС/!Проекты РЦРП/Блок №3/2023 год/MDP_23_24.xlsm')
+            self.url = Path(f'//megafon.ru/KVK/KRN/Files/TelegrafFiles/ОПРС/!Проекты РЦРП/Блок №3/{self.process_year[0]} год/MDP_23_24.xlsm')
         else:
             if Path(self.args.source_file).is_file():
                 self.url = self.args.source_file
