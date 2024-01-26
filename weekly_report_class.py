@@ -18,7 +18,7 @@ from MyLoggingException import MyLoggingException
 class WeeklyReport:
     def __init__(self):
         self.program_name = Path(__file__).stem
-        self.program_version = "0.2.13"
+        self.program_version = "0.2.14"
         self.log_level = 'ERROR'
 
         today_datetime = datetime.datetime.now()
@@ -227,7 +227,9 @@ class WeeklyReport:
         if self.process_year.__len__() == 2:
             mask_plan_year = (df_kpi['PLAN_YEAR'] == self.process_year[0]) | (df_kpi['PLAN_YEAR'] == self.process_year[1])
         else:
-            mask_plan_year = df_kpi['PLAN_YEAR'] == self.process_year[0]
+            # mask_plan_year = df_kpi['PLAN_YEAR'] == self.process_year[0]
+            mask_plan_year = (df_kpi['PLAN_YEAR'] == 2023) | (df_kpi['PLAN_YEAR'] == 2024)  # TODO: Для учета программ 2023 и 2024 года. Временно, до пере привязки мероприятий
+
         mask_new_bs = df_kpi['CHECK_NEW_PLAN'] == 'Новая'
         mask_check_plan = df_kpi['CHECK_PLAN'] == 'Да'
         mask_2024_2023_boost = df_kpi['PROGRAM'] == "КФ. Развитие регионов_Ускоренные запуски 2024. 2023"
