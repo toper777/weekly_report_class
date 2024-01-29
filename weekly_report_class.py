@@ -18,7 +18,7 @@ from MyLoggingException import MyLoggingException
 class WeeklyReport:
     def __init__(self):
         self.program_name = Path(__file__).stem
-        self.program_version = "0.2.14"
+        self.program_version = "0.2.15"
         self.log_level = 'ERROR'
 
         today_datetime = datetime.datetime.now()
@@ -70,9 +70,9 @@ class WeeklyReport:
         if self.args.report_file is None:
             self.dir_name = Path('//megafon.ru/KVK', 'KRN', 'Files', 'TelegrafFiles', 'ОПРС', '!Проекты РЦРП', 'Блок №3', f'{datetime.datetime.today().year} год', 'Отчеты')
             if self.args.dont_save_ap:
-                self.report_file = Path(self.dir_name, f'{datetime.date.today().strftime("%Y%m%d")} Отчет по выполнению мероприятий КФ [{save_begin_date} - {save_end_date}].xlsx')
+                self.report_file = Path(self.dir_name, f'{datetime.date.today().strftime("%Y%m%d")} Отчет по выполнению мероприятий КФ ({save_begin_date} - {save_end_date}).xlsx')
             else:
-                self.report_file = Path(self.dir_name, f'{datetime.date.today().strftime("%Y%m%d")} Отчет по выполнению мероприятий КФ [{save_begin_date} - {save_end_date}] [АП].xlsx')
+                self.report_file = Path(self.dir_name, f'{datetime.date.today().strftime("%Y%m%d")} Отчет по выполнению мероприятий КФ ({save_begin_date} - {save_end_date}) (АП).xlsx')
         else:
             if os.access(PurePath(self.args.report_file).parents[0], os.W_OK):
                 self.report_file = Path(self.args.report_file)
@@ -227,8 +227,7 @@ class WeeklyReport:
         if self.process_year.__len__() == 2:
             mask_plan_year = (df_kpi['PLAN_YEAR'] == self.process_year[0]) | (df_kpi['PLAN_YEAR'] == self.process_year[1])
         else:
-            # mask_plan_year = df_kpi['PLAN_YEAR'] == self.process_year[0]
-            mask_plan_year = (df_kpi['PLAN_YEAR'] == 2023) | (df_kpi['PLAN_YEAR'] == 2024)  # TODO: Для учета программ 2023 и 2024 года. Временно, до пере привязки мероприятий
+            mask_plan_year = df_kpi['PLAN_YEAR'] == self.process_year[0]
 
         mask_new_bs = df_kpi['CHECK_NEW_PLAN'] == 'Новая'
         mask_check_plan = df_kpi['CHECK_PLAN'] == 'Да'
