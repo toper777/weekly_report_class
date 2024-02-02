@@ -18,7 +18,7 @@ from MyLoggingException import MyLoggingException
 class WeeklyReport:
     def __init__(self):
         self.program_name = Path(__file__).stem
-        self.program_version = "0.2.15"
+        self.program_version = "0.2.16"
         self.log_level = 'ERROR'
 
         today_datetime = datetime.datetime.now()
@@ -64,7 +64,7 @@ class WeeklyReport:
             if Path(self.args.source_file).is_file():
                 self.url = self.args.source_file
             else:
-                print(f'{Colors.RED}Файл с данные {self.args.source_file} не найден{Colors.END}')
+                print(f'{Colors.RED}Файл с данными {self.args.source_file} не найден{Colors.END}')
                 sys.exit(130)
 
         if self.args.report_file is None:
@@ -121,12 +121,12 @@ class WeeklyReport:
         _df[['PROGNOZ_DATE', 'PLAN_DATE_END']] = _df[['PROGNOZ_DATE', 'PLAN_DATE_END']].apply(pd.to_datetime)
 
         rename_columns = {
-            'RO': 'Регион',
-            'PROGNOZ_DATE': 'Прогноз',
-            'CHECK_FACT': 'Факт',
-            'PLAN_DATE_END': 'MDP План',
             'RO_CLUSTER': 'Кластер',
+            'RO': 'Регион',
+            'PLAN_DATE_END': 'MDP План',
+            'PROGNOZ_DATE': 'Прогноз',
             'VIDACHA': 'Выдача',
+            'CHECK_FACT': 'Факт',
             '83_done': 'Выдача (по 83)',
         }
         mask_plan_date = self.make_date_mask(_df, 'PLAN_DATE_END', self.begin_date, self.end_date)
@@ -144,11 +144,13 @@ class WeeklyReport:
         df_vidacha = _df[mask_vidacha_date & mask_check_vidacha].groupby(['RO_CLUSTER', 'RO']).agg({'VIDACHA': 'count', }).reset_index()
         # df_vidacha = _df[mask_vidacha_date & mask_check_vidacha].groupby(['RO_CLUSTER', 'RO']).agg({'83_done': 'count', }).reset_index()
 
-        _df = pd.merge(df_plan, pd.merge(df_prognoz, pd.merge(df_vidacha, df_fact, how='outer', sort=True), how='outer', sort=True), how='outer', sort=True).fillna(value=0).sort_values(by='RO_CLUSTER').rename(columns=rename_columns)
+        # _df = pd.merge(df_plan, pd.merge(df_prognoz, pd.merge(df_vidacha, df_fact, how='outer', sort=True), how='outer', sort=True), how='outer', sort=True).fillna(value=0).sort_values(by='RO_CLUSTER').rename(columns=rename_columns)
+        _df = pd.merge(df_plan, pd.merge(df_prognoz, pd.merge(df_vidacha, df_fact, how='outer', sort=True, on=['RO_CLUSTER', 'RO']), how='outer', sort=True, on=['RO_CLUSTER', 'RO']), how='outer', sort=True, on=['RO_CLUSTER', 'RO']).fillna(value=0).sort_values(by='RO_CLUSTER').rename(columns=rename_columns)
 
         _df[delta_char] = _df['Факт'] - _df['Прогноз']
         _df.loc["total"] = _df.sum(numeric_only=True)
         _df.at["total", 'Регион'] = "ИТОГО:"
+        _df = _df[[rename_columns['RO_CLUSTER'], rename_columns['RO'], rename_columns['PLAN_DATE_END'], rename_columns['PROGNOZ_DATE'], rename_columns['VIDACHA'], rename_columns['CHECK_FACT'], delta_char]]
         return _df
 
     def report_kpi(self, df_kpi: pd.DataFrame) -> FormattedWorkbook:
@@ -263,10 +265,10 @@ class WeeklyReport:
             # Сохраняем АП
             for sheet_name, df_name in [["АП БС", df_all_bs], ["АП РРЛ", df_rrl], ["АП Энерго", df_energy], ["АП Климатика", df_climate]]:
                 mask_prognoz_date = self.make_date_mask(df_name, 'PROGNOZ_DATE', self.begin_date, self.end_date)
-                print(f'Создаем лист отчета: {Colors.GREEN}"{sheet_name}"{Colors.END}')
                 _df = df_name[mask_prognoz_date].sort_values(by=['build_priority', 'RO']).rename(columns=rename_columns)
-                wb.excel_format_table(_df, sheet_name, report_sheets[sheet_name])
-
+                if not _df.empty:
+                    print(f'Создаем лист отчета: {Colors.GREEN}"{sheet_name}"{Colors.END}')
+                    wb.excel_format_table(_df, sheet_name, report_sheets[sheet_name])
         return wb
 
     def save_report(self, wb: FormattedWorkbook) -> None:
