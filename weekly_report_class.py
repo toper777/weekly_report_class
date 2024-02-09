@@ -18,7 +18,7 @@ from MyLoggingException import MyLoggingException
 class WeeklyReport:
     def __init__(self):
         self.program_name = Path(__file__).stem
-        self.program_version = "0.2.17"
+        self.program_version = "0.2.18"
         self.log_level = 'ERROR'
 
         today_datetime = datetime.datetime.now()
@@ -97,7 +97,7 @@ class WeeklyReport:
             print(f'Получение данных из файла {Colors.GREEN}"{self.url}"{Colors.END}')
             with open(self.url, 'rb') as f:
                 g = io.BytesIO(f.read())
-            _df = pd.read_excel(g.getvalue(), sheet_name=self.sheets)
+            _df = pd.read_excel(g, sheet_name=self.sheets)
             g.close()
             return _df
         except FileNotFoundError as ex:
