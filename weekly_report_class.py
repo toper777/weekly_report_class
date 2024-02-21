@@ -18,7 +18,7 @@ from MyLoggingException import MyLoggingException
 class WeeklyReport:
     def __init__(self):
         self.program_name = Path(__file__).stem
-        self.program_version = "0.2.18"
+        self.program_version = "0.2.19"
         self.log_level = 'ERROR'
 
         today_datetime = datetime.datetime.now()
@@ -41,16 +41,17 @@ class WeeklyReport:
         else:
             save_begin_date: str = self.args.begin_date
             split_begin_date: list[int] = list(map(int, save_begin_date.split('-')))
-            self.begin_date = datetime.datetime(year=split_begin_date[0],  month=split_begin_date[1], day=split_begin_date[2], hour=0, minute=0, second=0)
+            self.begin_date = datetime.datetime(year=split_begin_date[0], month=split_begin_date[1], day=split_begin_date[2], hour=0, minute=0, second=0)
 
         # Дата конца анализа
         if self.args.end_date is None:
-            self.end_date = datetime.datetime(year=today_datetime.year, month=today_datetime.month, day=calendar.monthrange(today_datetime.year, today_datetime.month)[1], hour=23, minute=59, second=59, microsecond=99999)
+            self.end_date = datetime.datetime(year=today_datetime.year, month=today_datetime.month, day=calendar.monthrange(today_datetime.year, today_datetime.month)[1], hour=23,
+                                              minute=59, second=59, microsecond=99999)
             save_end_date = self.end_date.strftime('%Y-%m-%d')
         else:
             save_end_date = self.args.end_date
             split_end_date: list[int] = list(map(int, save_end_date.split('-')))
-            self.end_date = datetime.datetime(year=split_end_date[0],  month=split_end_date[1], day=split_end_date[2], hour=23, minute=59, second=59, microsecond=99999)
+            self.end_date = datetime.datetime(year=split_end_date[0], month=split_end_date[1], day=split_end_date[2], hour=23, minute=59, second=59, microsecond=99999)
             # self.end_date = f'{self.args.end_date} {datetime.time(hour=23, minute=59, second=59, microsecond=99999).strftime("%H:%M:%S")}'
 
         if self.begin_date.year == self.end_date.year:
@@ -72,7 +73,8 @@ class WeeklyReport:
             if self.args.dont_save_ap:
                 self.report_file = Path(self.dir_name, f'{datetime.date.today().strftime("%Y%m%d")} Отчет по выполнению мероприятий КФ ({save_begin_date} - {save_end_date}).xlsx')
             else:
-                self.report_file = Path(self.dir_name, f'{datetime.date.today().strftime("%Y%m%d")} Отчет по выполнению мероприятий КФ ({save_begin_date} - {save_end_date}) (АП).xlsx')
+                self.report_file = Path(self.dir_name,
+                                        f'{datetime.date.today().strftime("%Y%m%d")} Отчет по выполнению мероприятий КФ ({save_begin_date} - {save_end_date}) (АП).xlsx')
         else:
             if os.access(PurePath(self.args.report_file).parents[0], os.W_OK):
                 self.report_file = Path(self.args.report_file)
@@ -87,12 +89,12 @@ class WeeklyReport:
         self.region_obligations_file = self.not_done_file = Path(self.dir_name, 'Обязательства регионов.xlsx')
         self.upload_date: pd.DataFrame = pd.DataFrame()
 
-
     def get_data(self) -> dict[str, pd.DataFrame]:
         try:
             data_update_age = datetime.datetime.now() - datetime.datetime.fromtimestamp(os.stat(self.url).st_mtime)
             if data_update_age > datetime.timedelta(hours=3):
-                if input(f'{Colors.RED}Файл {self.url} обновлялся {(data_update_age.days*24 + data_update_age.seconds/3600):.2f} часов назад! Хотите продолжить обработку данных (y/N)?{Colors.END}').lower() != 'y':
+                if input(
+                        f'{Colors.RED}Файл {self.url} обновлялся {(data_update_age.days * 24 + data_update_age.seconds / 3600):.2f} часов назад! Хотите продолжить обработку данных (y/N)?{Colors.END}').lower() != 'y':
                     sys.exit(12)
             print(f'Получение данных из файла {Colors.GREEN}"{self.url}"{Colors.END}')
             with open(self.url, 'rb') as f:
@@ -104,7 +106,6 @@ class WeeklyReport:
             raise MyLoggingException(f'Файл {self.url} не существует. Ошибка {ex}')
         except Exception as ex:
             raise MyLoggingException(f'Ошибка при получении данных: {ex}')
-
 
     @staticmethod
     def make_date_mask(_df: pd.DataFrame, column_name: str, _begin_date: datetime, _end_date: datetime) -> pd.Series:
@@ -140,12 +141,15 @@ class WeeklyReport:
         # df_vidacha = _df[mask_vidacha_date & mask_check_vidacha].groupby(['RO_CLUSTER', 'RO']).agg({'83_done': 'count', }).reset_index()
 
         # _df = pd.merge(df_plan, pd.merge(df_prognoz, pd.merge(df_vidacha, df_fact, how='outer', sort=True), how='outer', sort=True), how='outer', sort=True).fillna(value=0).sort_values(by='RO_CLUSTER').rename(columns=rename_columns)
-        _df = pd.merge(df_plan, pd.merge(df_prognoz, pd.merge(df_vidacha, df_fact, how='outer', sort=True, on=['RO_CLUSTER', 'RO']), how='outer', sort=True, on=['RO_CLUSTER', 'RO']), how='outer', sort=True, on=['RO_CLUSTER', 'RO']).fillna(value=0).sort_values(by='RO_CLUSTER').rename(columns=rename_columns)
+        _df = pd.merge(df_plan,
+                       pd.merge(df_prognoz, pd.merge(df_vidacha, df_fact, how='outer', sort=True, on=['RO_CLUSTER', 'RO']), how='outer', sort=True, on=['RO_CLUSTER', 'RO']),
+                       how='outer', sort=True, on=['RO_CLUSTER', 'RO']).fillna(value=0).sort_values(by='RO_CLUSTER').rename(columns=rename_columns)
 
         _df[delta_char] = _df['Факт'] - _df['Прогноз']
         _df.loc["total"] = _df.sum(numeric_only=True)
         _df.at["total", 'Регион'] = "ИТОГО:"
-        _df = _df[[rename_columns['RO_CLUSTER'], rename_columns['RO'], rename_columns['PLAN_DATE_END'], rename_columns['PROGNOZ_DATE'], rename_columns['VIDACHA'], rename_columns['CHECK_FACT'], delta_char]]
+        _df = _df[[rename_columns['RO_CLUSTER'], rename_columns['RO'], rename_columns['PLAN_DATE_END'], rename_columns['PROGNOZ_DATE'], rename_columns['VIDACHA'],
+                   rename_columns['CHECK_FACT'], delta_char]]
         return _df
 
     def report_kpi(self, df_kpi: pd.DataFrame) -> FormattedWorkbook:
