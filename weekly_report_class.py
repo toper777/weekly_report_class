@@ -18,7 +18,7 @@ from MyLoggingException import MyLoggingException
 class WeeklyReport:
     def __init__(self):
         self.program_name = Path(__file__).stem
-        self.program_version = "0.2.19"
+        self.program_version = "0.2.20"
         self.log_level = 'ERROR'
 
         today_datetime = datetime.datetime.now()
@@ -108,7 +108,7 @@ class WeeklyReport:
             raise MyLoggingException(f'Ошибка при получении данных: {ex}')
 
     @staticmethod
-    def make_date_mask(_df: pd.DataFrame, column_name: str, _begin_date: datetime, _end_date: datetime) -> pd.Series:
+    def make_date_mask(_df: pd.DataFrame, column_name: str, _begin_date: datetime, _end_date: datetime) -> pd.Series(bool):
         _result = (_df[column_name] >= _begin_date) & (_df[column_name] <= _end_date)
         return _result
 

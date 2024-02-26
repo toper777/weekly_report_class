@@ -34,3 +34,4 @@ __pycache__/
 /weekly_report.egg-info/requires.txt
 /weekly_report.egg-info/SOURCES.txt
 /weekly_report.egg-info/top_level.txt
+/qodana.yaml
