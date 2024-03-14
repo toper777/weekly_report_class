@@ -1,0 +1,24 @@
+name: Build windows exe with PyInstaller
+
+on:
+  workflow_dispatch:
+    inputs:
+      tags:
+        description: 'Test build'
+
+jobs:
+  build:
+    runs-on: ubuntu=latest
+
+    steps:
+      - uses: action/checkout@v2
+
+      - name: Package Application
+        uses: JackMcKew/pyinstaller-action-windows@main
+        with:
+          path: .
+
+      - uses: action/upload-artifact@v2
+        with:
+          name: weekly_report
+          path: dist/windows
