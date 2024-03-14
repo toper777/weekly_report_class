@@ -1,6 +1,6 @@
 name: Build windows exe with PyInstaller
 
-on: [push]
+on: [workflow_dispatch]
 #  workflow_dispatch:
 #    inputs:
 #      tags:
