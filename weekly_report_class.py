@@ -5,6 +5,7 @@ import locale
 import os
 import sys
 import calendar
+from functools import reduce
 from pathlib import Path, PurePath
 
 import pandas as pd
@@ -14,11 +15,13 @@ from Colors import Colors
 from FormattedWorkbook import FormattedWorkbook
 from MyLoggingException import MyLoggingException
 
+pd.options.mode.copy_on_write = True
+
 
 class WeeklyReport:
     def __init__(self):
         self.program_name = Path(__file__).stem
-        self.program_version = "0.2.21"
+        self.program_version = "0.2.22"
         self.log_level = 'ERROR'
 
         today_datetime = datetime.datetime.now()
@@ -140,10 +143,11 @@ class WeeklyReport:
         df_vidacha = _df[mask_vidacha_date & mask_check_vidacha].groupby(['RO_CLUSTER', 'RO']).agg({'VIDACHA': 'count', }).reset_index()
         # df_vidacha = _df[mask_vidacha_date & mask_check_vidacha].groupby(['RO_CLUSTER', 'RO']).agg({'83_done': 'count', }).reset_index()
 
-        # _df = pd.merge(df_plan, pd.merge(df_prognoz, pd.merge(df_vidacha, df_fact, how='outer', sort=True), how='outer', sort=True), how='outer', sort=True).fillna(value=0).sort_values(by='RO_CLUSTER').rename(columns=rename_columns)
-        _df = pd.merge(df_plan,
-                       pd.merge(df_prognoz, pd.merge(df_vidacha, df_fact, how='outer', sort=True, on=['RO_CLUSTER', 'RO']), how='outer', sort=True, on=['RO_CLUSTER', 'RO']),
-                       how='outer', sort=True, on=['RO_CLUSTER', 'RO']).fillna(value=0).sort_values(by='RO_CLUSTER').rename(columns=rename_columns)
+        data_frames = [df_plan, df_prognoz, df_fact, df_vidacha]
+        _df = reduce(lambda left, right: pd.merge(left, right, how='outer', sort=True, on=['RO_CLUSTER', 'RO']), data_frames).fillna(value=0).sort_values(by='RO_CLUSTER').rename(columns=rename_columns)
+        # _df = pd.merge(df_plan,
+        #                pd.merge(df_prognoz, pd.merge(df_vidacha, df_fact, how='outer', sort=True, on=['RO_CLUSTER', 'RO']), how='outer', sort=True, on=['RO_CLUSTER', 'RO']),
+        #                how='outer', sort=True, on=['RO_CLUSTER', 'RO']).fillna(value=0).sort_values(by='RO_CLUSTER').rename(columns=rename_columns)
 
         _df[delta_char] = _df['Факт'] - _df['Прогноз']
         _df.loc["total"] = _df.sum(numeric_only=True)

@@ -1,10 +1,6 @@
 name: Build windows exe with PyInstaller
 
 on: [workflow_dispatch]
-#  workflow_dispatch:
-#    inputs:
-#      tags:
-#        description: 'Test build'
 
 jobs:
   build:
