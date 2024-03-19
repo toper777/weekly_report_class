@@ -21,7 +21,7 @@ pd.options.mode.copy_on_write = True
 class WeeklyReport:
     def __init__(self):
         self.program_name = Path(__file__).stem
-        self.program_version = "0.2.22"
+        self.program_version = "0.2.23"
         self.log_level = 'ERROR'
 
         today_datetime = datetime.datetime.now()
@@ -144,17 +144,18 @@ class WeeklyReport:
         # df_vidacha = _df[mask_vidacha_date & mask_check_vidacha].groupby(['RO_CLUSTER', 'RO']).agg({'83_done': 'count', }).reset_index()
 
         data_frames = [df_plan, df_prognoz, df_fact, df_vidacha]
-        _df = reduce(lambda left, right: pd.merge(left, right, how='outer', sort=True, on=['RO_CLUSTER', 'RO']), data_frames).fillna(value=0).sort_values(by='RO_CLUSTER').rename(columns=rename_columns)
-        # _df = pd.merge(df_plan,
+
+        df_merged = reduce(lambda left, right: pd.merge(left, right, how='outer', sort=True, on=['RO_CLUSTER', 'RO']), data_frames).fillna(value=0).sort_values(by='RO_CLUSTER').rename(columns=rename_columns)
+        # df_merged = pd.merge(df_plan,
         #                pd.merge(df_prognoz, pd.merge(df_vidacha, df_fact, how='outer', sort=True, on=['RO_CLUSTER', 'RO']), how='outer', sort=True, on=['RO_CLUSTER', 'RO']),
         #                how='outer', sort=True, on=['RO_CLUSTER', 'RO']).fillna(value=0).sort_values(by='RO_CLUSTER').rename(columns=rename_columns)
 
-        _df[delta_char] = _df['Факт'] - _df['Прогноз']
-        _df.loc["total"] = _df.sum(numeric_only=True)
-        _df.at["total", 'Регион'] = "ИТОГО:"
-        _df = _df[[rename_columns['RO_CLUSTER'], rename_columns['RO'], rename_columns['PLAN_DATE_END'], rename_columns['PROGNOZ_DATE'], rename_columns['VIDACHA'],
-                   rename_columns['CHECK_FACT'], delta_char]]
-        return _df
+        df_merged[delta_char] = df_merged['Факт'] - df_merged['Прогноз']
+        df_merged.loc["total"] = _df.sum(numeric_only=True)
+        df_merged.at["total", 'Регион'] = "ИТОГО:"
+        df_merged = df_merged[[rename_columns['RO_CLUSTER'], rename_columns['RO'], rename_columns['PLAN_DATE_END'], rename_columns['PROGNOZ_DATE'], rename_columns['VIDACHA'],
+                               rename_columns['CHECK_FACT'], delta_char]]
+        return df_merged
 
     def report_kpi(self, df_kpi: pd.DataFrame) -> FormattedWorkbook:
         report_sheets = {
