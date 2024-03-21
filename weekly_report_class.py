@@ -5,6 +5,7 @@ import locale
 import os
 import sys
 import calendar
+import warnings
 from functools import reduce
 from pathlib import Path, PurePath
 
@@ -15,13 +16,11 @@ from Colors import Colors
 from FormattedWorkbook import FormattedWorkbook
 from MyLoggingException import MyLoggingException
 
-pd.options.mode.copy_on_write = True
-
 
 class WeeklyReport:
     def __init__(self):
         self.program_name = Path(__file__).stem
-        self.program_version = "0.2.23"
+        self.program_version = "0.2.24"
         self.log_level = 'ERROR'
 
         today_datetime = datetime.datetime.now()
@@ -117,7 +116,8 @@ class WeeklyReport:
 
     def make_report(self, _df: pd.DataFrame) -> pd.DataFrame:
         delta_char = f'{chr(0x0394)}'
-        _df[['PROGNOZ_DATE', 'PLAN_DATE_END']] = _df[['PROGNOZ_DATE', 'PLAN_DATE_END']].apply(pd.to_datetime)
+        # _df[['PROGNOZ_DATE', 'PLAN_DATE_END']] = _df[['PROGNOZ_DATE', 'PLAN_DATE_END']].apply(pd.to_datetime)
+        _df[['PROGNOZ_DATE', 'PLAN_DATE_END']].apply(pd.to_datetime)
 
         rename_columns = {
             'RO_CLUSTER': 'Кластер',
@@ -143,18 +143,28 @@ class WeeklyReport:
         df_vidacha = _df[mask_vidacha_date & mask_check_vidacha].groupby(['RO_CLUSTER', 'RO']).agg({'VIDACHA': 'count', }).reset_index()
         # df_vidacha = _df[mask_vidacha_date & mask_check_vidacha].groupby(['RO_CLUSTER', 'RO']).agg({'83_done': 'count', }).reset_index()
 
+        # Список данных для объединения
         data_frames = [df_plan, df_prognoz, df_fact, df_vidacha]
 
-        df_merged = reduce(lambda left, right: pd.merge(left, right, how='outer', sort=True, on=['RO_CLUSTER', 'RO']), data_frames).fillna(value=0).sort_values(by='RO_CLUSTER').rename(columns=rename_columns)
-        # df_merged = pd.merge(df_plan,
-        #                pd.merge(df_prognoz, pd.merge(df_vidacha, df_fact, how='outer', sort=True, on=['RO_CLUSTER', 'RO']), how='outer', sort=True, on=['RO_CLUSTER', 'RO']),
-        #                how='outer', sort=True, on=['RO_CLUSTER', 'RO']).fillna(value=0).sort_values(by='RO_CLUSTER').rename(columns=rename_columns)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=FutureWarning)
+            # Объединение с .merge и использование functools.reduce
+            # df_merged = reduce(lambda left, right: pd.merge(left, right, how='outer', sort=True, on=['RO_CLUSTER', 'RO']), data_frames).fillna(value=0).sort_values(by='RO_CLUSTER').rename(columns=rename_columns)
 
-        df_merged[delta_char] = df_merged['Факт'] - df_merged['Прогноз']
-        df_merged.loc["total"] = _df.sum(numeric_only=True)
-        df_merged.at["total", 'Регион'] = "ИТОГО:"
-        df_merged = df_merged[[rename_columns['RO_CLUSTER'], rename_columns['RO'], rename_columns['PLAN_DATE_END'], rename_columns['PROGNOZ_DATE'], rename_columns['VIDACHA'],
-                               rename_columns['CHECK_FACT'], delta_char]]
+            # Еще один вариант с .merge "в лоб"
+            # df_merged = pd.merge(df_plan,
+            #                pd.merge(df_prognoz, pd.merge(df_vidacha, df_fact, how='outer', sort=True, on=['RO_CLUSTER', 'RO']), how='outer', sort=True, on=['RO_CLUSTER', 'RO']),
+            #                how='outer', sort=True, on=['RO_CLUSTER', 'RO']).fillna(value=0).sort_values(by='RO_CLUSTER').rename(columns=rename_columns)
+
+            # Объединение с .join
+            data_frames = [data_frame.set_index(['RO_CLUSTER', 'RO']) for data_frame in data_frames]
+            df_merged = data_frames[0].join(data_frames[1:], how='outer', sort=True).reset_index().fillna(value=0).sort_values(by='RO_CLUSTER').rename(columns=rename_columns)
+
+            df_merged[delta_char] = df_merged['Факт'] - df_merged['Прогноз']
+            df_merged.loc["total"] = df_merged.sum(numeric_only=True)
+            df_merged.at["total", 'Регион'] = "ИТОГО:"
+            df_merged = df_merged[[rename_columns['RO_CLUSTER'], rename_columns['RO'], rename_columns['PLAN_DATE_END'], rename_columns['PROGNOZ_DATE'], rename_columns['VIDACHA'],
+                                   rename_columns['CHECK_FACT'], delta_char]]
         return df_merged
 
     def report_kpi(self, df_kpi: pd.DataFrame) -> FormattedWorkbook:
