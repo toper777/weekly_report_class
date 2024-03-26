@@ -11,6 +11,8 @@ from pathlib import Path, PurePath
 
 import pandas as pd
 from loguru import logger
+from xlrd import XLRDError
+import xlwings as xw
 
 from Colors import Colors
 from FormattedWorkbook import FormattedWorkbook
@@ -20,7 +22,7 @@ from MyLoggingException import MyLoggingException
 class WeeklyReport:
     def __init__(self):
         self.program_name = Path(__file__).stem
-        self.program_version = "0.2.24"
+        self.program_version = "0.3.0"
         self.log_level = 'ERROR'
 
         today_datetime = datetime.datetime.now()
@@ -103,11 +105,32 @@ class WeeklyReport:
                 g = io.BytesIO(f.read())
             _df = pd.read_excel(g, sheet_name=self.sheets)
             g.close()
-            return _df
         except FileNotFoundError as ex:
             raise MyLoggingException(f'Файл {self.url} не существует. Ошибка {ex}')
-        except Exception as ex:
-            raise MyLoggingException(f'Ошибка при получении данных: {ex}')
+        except XLRDError:
+            try:
+                print(f'Try read data from protected file: {Colors.GREEN}"{self.url}"{Colors.END}')
+                _df = dict()
+                wb = xw.Book(self.url)
+                for sh_name in self.sheets:
+                    sheet = wb.sheets[wb.sheet_names.index(sh_name)]
+                    _df[sh_name] = pd.DataFrame(sheet['A1'].expand().options(pd.DataFrame, chunksize=1_000_000).value).reset_index()
+            except XLRDError as err:
+                print(f'{Colors.RED}XLRD Error: Ошибка открытия защищенного файла "{self.url}". {err}{Colors.END}')
+                sys.exit(140)
+            except ValueError as err:
+                if "Cannot open two workbooks named" in err.__str__():
+                    print(
+                        f'{Colors.RED}XLRD Error: Excel не может открыть 2 файла с одним именем, даже сохраненные в разных местах. Закройте окно Excel с файлом "'
+                        f'{self.url.name}".{Colors.END}')
+                else:
+                    print(f'{Colors.RED}XLRD Error: {err}{Colors.END}')
+                sys.exit(140)
+            except Exception as ex:
+                raise MyLoggingException(f'Ошибка при получении данных: {ex}')
+
+        return _df
+
 
     @staticmethod
     def make_date_mask(_df: pd.DataFrame, column_name: str, _begin_date: datetime, _end_date: datetime) -> pd.Series(bool):
