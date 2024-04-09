@@ -8,6 +8,7 @@ import calendar
 import warnings
 from functools import reduce
 from pathlib import Path, PurePath
+from typing import Union
 
 import pandas as pd
 from loguru import logger
@@ -22,7 +23,7 @@ from MyLoggingException import MyLoggingException
 class WeeklyReport:
     def __init__(self):
         self.program_name = Path(__file__).stem
-        self.program_version = "0.3.1"
+        self.program_version = "0.3.2"
         self.log_level = 'ERROR'
 
         today_datetime = datetime.datetime.now()
@@ -36,6 +37,7 @@ class WeeklyReport:
         self.parser.add_argument("--dont-save-ap", action='store_true', help="Не сохранять адресные планы вместе с отчетом")
         self.parser.add_argument("-s", "--source-file", help="Файл с данными")
         self.parser.add_argument("-r", "--report-file", help="Имя файла с отчетом. Должен иметь расширение .xlsx")
+        self.parser.add_argument("-o", "--obligations-file", help="Файла с обязательствами")
         self.args = self.parser.parse_args()
 
         if self.args.begin_date is None:
@@ -72,6 +74,16 @@ class WeeklyReport:
                 print(f'{Colors.RED}Файл с данными {self.args.source_file} не найден{Colors.END}')
                 sys.exit(130)
 
+        if self.args.obligations_file is None:
+            self.obligations_file = Path(
+                f'//megafon.ru/KVK/KRN/Files/TelegrafFiles/ОПРС/!Проекты РЦРП/Блок №3/{self.process_year[0]} год/Обязательства КФ {self.process_year[0]}.xlsx')
+        else:
+            if Path(self.args.obligation_file).is_file():
+                self.obligations_file = self.args.obligation_file
+            else:
+                print(f'{Colors.RED}Файл с данными {self.args.obligation_file} не найден{Colors.END}')
+                sys.exit(130)
+
         if self.args.report_file is None:
             self.dir_name = Path('//megafon.ru/KVK', 'KRN', 'Files', 'TelegrafFiles', 'ОПРС', '!Проекты РЦРП', 'Блок №3', f'{datetime.datetime.today().year} год', 'Отчеты')
             if self.args.dont_save_ap:
@@ -89,11 +101,29 @@ class WeeklyReport:
 
         self.end_of_the_year = datetime.datetime(year=self.end_date.year, month=12, day=31, hour=23, minute=59, second=59, microsecond=99999)
         self.sheets = ['Массив', 'mdp_upload_date']
+        self.obligations_sheets = [f"Обязательства {month}" for month in pd.date_range(self.begin_date, self.end_date, freq='MS').strftime("%m.%Y").tolist()]
         self.not_done_file = Path(self.dir_name, 'Риски ВОЛС.xlsx')
-        self.region_obligations_file = self.not_done_file = Path(self.dir_name, 'Обязательства регионов.xlsx')
         self.upload_date: pd.DataFrame = pd.DataFrame()
+        self.obligations = None
+        self.dfo = dict()
+        self.ro_cluster = pd.DataFrame([['Cluster A', 'Белгородская область'],
+                                        ['Cluster A', 'Воронежская область'],
+                                        ['Cluster A', 'Липецкая область'],
+                                        ['Cluster A', 'Тамбовская область'],
+                                        ['Cluster B', 'Ростовская область'],
+                                        ['Cluster B', 'Сочи'],
+                                        ['Cluster C', 'Республика Ингушетия'],
+                                        ['Cluster C', 'Республика Северная Осетия-Алания'],
+                                        ['Cluster C', 'Ставропольский край'],
+                                        ['Cluster C', 'Чеченская республика'],
+                                        ['Cluster D', 'Кабардино-Балкарская республика'],
+                                        ['Cluster D', 'Карачаево-Черкесская республика'],
+                                        ['Cluster D', 'Республика Дагестан'],
+                                        ['Cluster E', 'Краснодарский край'],
+                                        ['Cluster E', 'Республика Адыгея']],
+                                       columns=['RO_CLUSTER', 'RO'])
 
-    def get_data(self) -> dict[str, pd.DataFrame]:
+    def get_data(self) -> Union[pd.DataFrame, dict[str, pd.DataFrame]]:
         try:
             data_update_age = datetime.datetime.now() - datetime.datetime.fromtimestamp(os.stat(self.url).st_mtime)
             if data_update_age > datetime.timedelta(hours=3):
@@ -128,18 +158,54 @@ class WeeklyReport:
                 sys.exit(140)
             except Exception as ex:
                 raise MyLoggingException(f'Ошибка при получении данных: {ex}')
-
+        self.get_obligations()
         return _df
 
+    def get_obligations(self):
+        bp_list = ['Новые БС', 'Существующие БС', 'РРЛ', 'Энергетика', 'Климатика']
+        obligations_string = 'Обязательства регионов'
+        names_indexes = ['RO_CLUSTER', 'RO']
+        _obligations = None
+
+        try:
+            print(f'Получение данных из файла обязательств {Colors.GREEN}"{self.obligations_file}"{Colors.END}')
+            with open(self.obligations_file, 'rb') as f:
+                g = io.BytesIO(f.read())
+                dfo = pd.read_excel(g, sheet_name=self.obligations_sheets, engine="calamine")
+
+            # Начинаем обработку файла обязательств. Присваиваем 1-ый лист
+            dfo[self.obligations_sheets[0]].rename(columns={dfo[self.obligations_sheets[0]].columns[0]: 'RO'}, inplace=True)
+            _obligations = dfo[self.obligations_sheets[0]]
+
+            # Объединяем обязательства периода в суммарную таблицу
+            for dfx in self.obligations_sheets[1:]:
+                dfo[dfx].rename(columns={dfo[dfx].columns[0]: 'RO'}, inplace=True)
+                _obligations = _obligations.set_index('RO').add(dfo[dfx].set_index('RO'), fill_value=0).reset_index()
+
+            # Формируем таблицы обязательства по Бизнес-процессам
+            _obligations = _obligations[:-1]  # Отрезаем строку ИТОГО:
+            _obligations = _obligations.merge(self.ro_cluster, on='RO', how='outer')  # Добавляем кластера для дальнейшей обработки
+
+            self.obligations = {'DATA': _obligations}
+
+            # Формируем объекты обязательств
+            for bp_name in bp_list:
+                indexes = list((*names_indexes, bp_name))
+                self.obligations[bp_name] = _obligations[indexes].rename(columns={bp_name: obligations_string})
+
+            # Формируем Обязательства Всего БС (Новые + Существующие)
+            self.obligations['Всего БС'] = self.obligations['Новые БС'].set_index(names_indexes).add(self.obligations['Существующие БС'].set_index(names_indexes), fill_value=0).reset_index()
+
+        except FileNotFoundError as ex:
+            raise MyLoggingException(f'Файл {self.url} не существует. Ошибка {ex}')
 
     @staticmethod
     def make_date_mask(_df: pd.DataFrame, column_name: str, _begin_date: datetime, _end_date: datetime) -> pd.Series(bool):
         _result = (_df[column_name] >= _begin_date) & (_df[column_name] <= _end_date)
         return _result
 
-    def make_report(self, _df: pd.DataFrame) -> pd.DataFrame:
+    def make_report(self, _df: pd.DataFrame, _dfo: pd.DataFrame) -> pd.DataFrame:
         delta_char = f'{chr(0x0394)}'
-        # _df[['PROGNOZ_DATE', 'PLAN_DATE_END']] = _df[['PROGNOZ_DATE', 'PLAN_DATE_END']].apply(pd.to_datetime)
         _df[['PROGNOZ_DATE', 'PLAN_DATE_END']].apply(pd.to_datetime)
 
         rename_columns = {
@@ -167,7 +233,7 @@ class WeeklyReport:
         # df_vidacha = _df[mask_vidacha_date & mask_check_vidacha].groupby(['RO_CLUSTER', 'RO']).agg({'83_done': 'count', }).reset_index()
 
         # Список данных для объединения
-        data_frames = [df_plan, df_prognoz, df_fact, df_vidacha]
+        data_frames = [df_plan, _dfo, df_prognoz, df_fact, df_vidacha]
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=FutureWarning)
@@ -186,7 +252,7 @@ class WeeklyReport:
             df_merged[delta_char] = df_merged['Факт'] - df_merged['Прогноз']
             df_merged.loc["total"] = df_merged.sum(numeric_only=True)
             df_merged.at["total", 'Регион'] = "ИТОГО:"
-            df_merged = df_merged[[rename_columns['RO_CLUSTER'], rename_columns['RO'], rename_columns['PLAN_DATE_END'], rename_columns['PROGNOZ_DATE'], rename_columns['VIDACHA'],
+            df_merged = df_merged[[rename_columns['RO_CLUSTER'], rename_columns['RO'], rename_columns['PLAN_DATE_END'], 'Обязательства регионов', rename_columns['PROGNOZ_DATE'], rename_columns['VIDACHA'],
                                    rename_columns['CHECK_FACT'], delta_char]]
         return df_merged
 
@@ -278,27 +344,27 @@ class WeeklyReport:
 
         df_all_bs = df_kpi[mask_check_plan & (mask_bs_build | mask_bs_rec) & mask_plan_year][report_columns]
         print(f'Создаем лист отчета: {Colors.GREEN}"Всего БС"{Colors.END}')
-        wb.excel_format_table(self.make_report(df_all_bs), 'Всего БС', report_sheets['Всего БС'])
+        wb.excel_format_table(self.make_report(df_all_bs, self.obligations["Всего БС"]), 'Всего БС', report_sheets['Всего БС'])
 
         df_new_bs = df_kpi[mask_check_plan & (mask_bs_build | mask_bs_rec) & mask_new_bs & mask_plan_year][report_columns]
         print(f'Создаем лист отчета: {Colors.GREEN}"Новые БС"{Colors.END}')
-        wb.excel_format_table(self.make_report(df_new_bs), 'Новые БС', report_sheets['Новые БС'])
+        wb.excel_format_table(self.make_report(df_new_bs, self.obligations["Новые БС"]), 'Новые БС', report_sheets['Новые БС'])
 
         df_exist_bs = df_kpi[mask_check_plan & (mask_bs_build | mask_bs_rec) & ~mask_new_bs & mask_plan_year][report_columns]
         print(f'Создаем лист отчета: {Colors.GREEN}"Существующие БС"{Colors.END}')
-        wb.excel_format_table(self.make_report(df_exist_bs), 'Существующие БС', report_sheets['Существующие БС'])
+        wb.excel_format_table(self.make_report(df_exist_bs, self.obligations["Существующие БС"]), 'Существующие БС', report_sheets['Существующие БС'])
 
         df_rrl = df_kpi[mask_check_plan & (mask_rrl_build | mask_rrl_rec) & mask_plan_year][report_columns]
         print(f'Создаем лист отчета: {Colors.GREEN}"РРЛ"{Colors.END}')
-        wb.excel_format_table(self.make_report(df_rrl), 'РРЛ', report_sheets['РРЛ'])
+        wb.excel_format_table(self.make_report(df_rrl, self.obligations["РРЛ"]), 'РРЛ', report_sheets['РРЛ'])
 
         df_energy = df_kpi[mask_check_plan & mask_energo & mask_plan_year][report_columns]
         print(f'Создаем лист отчета: {Colors.GREEN}"Энерго"{Colors.END}')
-        wb.excel_format_table(self.make_report(df_energy), 'Энерго', report_sheets['Энерго'])
+        wb.excel_format_table(self.make_report(df_energy, self.obligations["Энергетика"]), 'Энерго', report_sheets['Энерго'])
 
         df_climate = df_kpi[mask_check_plan & mask_climate & mask_plan_year][report_columns]
         print(f'Создаем лист отчета: {Colors.GREEN}"Климатика"{Colors.END}')
-        wb.excel_format_table(self.make_report(df_climate), 'Климатика', report_sheets['Климатика'])
+        wb.excel_format_table(self.make_report(df_climate, self.obligations["Климатика"]), 'Климатика', report_sheets['Климатика'])
 
         if not self.args.dont_save_ap:
             # Сохраняем АП
