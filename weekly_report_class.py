@@ -23,7 +23,7 @@ from MyLoggingException import MyLoggingException
 class WeeklyReport:
     def __init__(self):
         self.program_name = Path(__file__).stem
-        self.program_version = "0.3.3"
+        self.program_version = "0.3.4"
         self.log_level = 'ERROR'
 
         today_datetime = datetime.datetime.now()
@@ -238,22 +238,30 @@ class WeeklyReport:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=FutureWarning)
             # Объединение с .merge и использование functools.reduce
-            # df_merged = reduce(lambda left, right: pd.merge(left, right, how='outer', sort=True, on=['RO_CLUSTER', 'RO']), data_frames).fillna(value=0).sort_values(by='RO_CLUSTER').rename(columns=rename_columns)
+            # df_merged = reduce(lambda left, right: pd.merge(left, right, how='outer', sort=True, on=['RO_CLUSTER', 'RO']), data_frames).fillna(value=0).sort_values(by='RO').rename(columns=rename_columns)
 
             # Еще один вариант с .merge "в лоб"
             # df_merged = pd.merge(df_plan,
             #                pd.merge(df_prognoz, pd.merge(df_vidacha, df_fact, how='outer', sort=True, on=['RO_CLUSTER', 'RO']), how='outer', sort=True, on=['RO_CLUSTER', 'RO']),
-            #                how='outer', sort=True, on=['RO_CLUSTER', 'RO']).fillna(value=0).sort_values(by='RO_CLUSTER').rename(columns=rename_columns)
+            #                how='outer', sort=True, on=['RO_CLUSTER', 'RO']).fillna(value=0).sort_values(by='RO').rename(columns=rename_columns)
 
             # Объединение с .join
             data_frames = [data_frame.set_index(['RO_CLUSTER', 'RO']) for data_frame in data_frames]
-            df_merged = data_frames[0].join(data_frames[1:], how='outer', sort=True).reset_index().fillna(value=0).sort_values(by='RO_CLUSTER').rename(columns=rename_columns)
+            df_merged = data_frames[0].join(data_frames[1:], how='outer', sort=True).reset_index().fillna(value=0).sort_values(by='RO').rename(columns=rename_columns)
 
+            # Добавляем подсчет суммы в строку ИТОГО:
             df_merged[delta_char] = df_merged['Факт'] - df_merged['Прогноз']
             df_merged.loc["total"] = df_merged.sum(numeric_only=True)
             df_merged.at["total", 'Регион'] = "ИТОГО:"
-            df_merged = df_merged[[rename_columns['RO_CLUSTER'], rename_columns['RO'], rename_columns['PLAN_DATE_END'], 'Обязательства регионов', rename_columns['PROGNOZ_DATE'], rename_columns['VIDACHA'],
-                                   rename_columns['CHECK_FACT'], delta_char]]
+
+            # Удаляем кластеры из итоговой таблицы
+            df_merged = df_merged[[rename_columns['RO'],
+                                   rename_columns['PLAN_DATE_END'],
+                                   'Обязательства регионов',
+                                   rename_columns['PROGNOZ_DATE'],
+                                   rename_columns['VIDACHA'],
+                                   rename_columns['CHECK_FACT'],
+                                   delta_char]]
         return df_merged
 
     def report_kpi(self, df_kpi: pd.DataFrame) -> FormattedWorkbook:
