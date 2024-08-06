@@ -20,7 +20,7 @@ from FormattedWorkbook import FormattedWorkbook
 from MyLoggingException import MyLoggingException
 
 PROGRAM_NAME = Path(__file__).stem
-PROGRAM_VERSION = "0.4.1"
+PROGRAM_VERSION = "0.4.2"
 
 
 class WeeklyReport:
@@ -231,7 +231,8 @@ class WeeklyReport:
         mask_cumm_prognoz_date = self.make_date_mask(_df, 'PROGNOZ_DATE', self.begin_of_the_year, self.end_date)
         mask_prognoz_date = self.make_date_mask(_df, 'PROGNOZ_DATE', self.begin_date, self.end_date)
         mask_fact_date = self.make_date_mask(_df, 'MIN_DATE_FACT', self.begin_of_the_year, self.end_date)
-        mask_vidacha_date = self.make_date_mask(_df, 'PROGNOZ_DATE', self.begin_of_the_year, self.end_of_the_year)
+        # mask_vidacha_date = self.make_date_mask(_df, 'PROGNOZ_DATE', self.begin_of_the_year, self.end_of_the_year)
+        mask_vidacha_date = self.make_date_mask(_df, 'PROGNOZ_DATE', self.begin_of_the_year, self.end_date)
         mask_vidacha_date_forward = self.make_date_mask(_df, 'PROGNOZ_DATE', self.end_date + datetime.timedelta(seconds=2), self.end_of_the_year)
         mask_check_fact = (_df['CHECK_FACT'] == 1)
         mask_check_vidacha = (_df['VIDACHA'] == 1)
