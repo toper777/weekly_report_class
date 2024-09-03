@@ -208,7 +208,7 @@ class WeeklyReport:
             raise MyLoggingException(f'Файл {self.url} не существует. Ошибка {ex}')
 
     @staticmethod
-    def make_date_mask(_df: pd.DataFrame, column_name: str, _begin_date: datetime, _end_date: datetime) -> pd.Series(bool):
+    def make_date_mask(_df: pd.DataFrame, column_name: str, _begin_date: datetime, _end_date: datetime) -> pd.Series:
         _result = (_df[column_name] >= _begin_date) & (_df[column_name] <= _end_date)
         return _result
 
