@@ -20,7 +20,7 @@ from FormattedWorkbook import FormattedWorkbook
 from MyLoggingException import MyLoggingException
 
 PROGRAM_NAME = Path(__file__).stem
-PROGRAM_VERSION = "0.4.2"
+PROGRAM_VERSION = "0.4.3"
 
 
 class WeeklyReport:
@@ -71,7 +71,7 @@ class WeeklyReport:
         self.end_of_the_year = datetime.datetime(year=self.end_date.year, month=12, day=31, hour=23, minute=59, second=59, microsecond=99999)
 
         if self.args.source_file is None:
-            self.url = Path(f'//megafon.ru/KVK/KRN/Files/TelegrafFiles/ОПРС/!Проекты РЦРП/Блок №3/{self.process_year[0]} год/MDP_23_24.xlsb')
+            self.url = Path(f'//megafon.ru/KVK/KRN/Files/TelegrafFiles/ОПРС/!Проекты РЦРП/Блок №3/{self.process_year[0]} год/MDP_24_25.xlsb')
         else:
             if Path(self.args.source_file).is_file():
                 self.url = self.args.source_file
