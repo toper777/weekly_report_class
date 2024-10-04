@@ -20,7 +20,7 @@ from FormattedWorkbook import FormattedWorkbook
 from MyLoggingException import MyLoggingException
 
 PROGRAM_NAME = Path(__file__).stem
-PROGRAM_VERSION = "0.4.4"
+PROGRAM_VERSION = "0.4.5"
 
 
 class WeeklyReport:
@@ -304,7 +304,11 @@ class WeeklyReport:
             'Существующие БС': 'exist_bs_report',
             'РРЛ': 'rrl_report',
             'Энерго': 'energy_report',
+            'Энерго ПО строительства': 'energy_report_po',
+            'Энерго ПО ПЭ': 'energy_report_self_do',
             'Климатика': 'climate_report',
+            'Климатика ПО строительства': 'climate_report_po',
+            'Климатика ПО ПЭ': 'climate_report_self_do',
             'АП БС': 'ap_all_bs',
             'АП РРЛ': 'ap_rrl',
             'АП Энерго': 'ap_energy',
@@ -350,15 +354,12 @@ class WeeklyReport:
             'RO_CLUSTER',
             'NAZ',
             'CHECK_NEW_PLAN',
+            'PO',
             'PLAN_DATE_END',
             'PROGNOZ_DATE',
             'PROGNOZ_COMMENT',
-            'RS_2023',
-            'VIP',
-            'build_priority',
             'MIN_DATE_FACT',
             'VIDACHA',
-            '83_done',
         ]
 
         mask_rrl_build = df_kpi['BP_ESUP'] == 'Строительство РРЛ'
@@ -368,6 +369,8 @@ class WeeklyReport:
         mask_bs_rs_on = df_kpi['BP_ESUP'] == 'БС_Включение RAN Sharing'
         mask_energo = df_kpi['BP_ESUP'] == 'Модернизация энергоснабжения'
         mask_climate = df_kpi['BP_ESUP'] == 'Модернизация климатического оборудования'
+
+        mask_po_self_do = df_kpi['PO'] == 'Работы своими силами'
 
         # Убрал, в связи с изменение методики KPI в 2024 году
         # mask_bs_pico = df_kpi['BP_ESUP'] == 'Pico Cell_Включение'
@@ -418,25 +421,37 @@ class WeeklyReport:
 
         # df_energy = df_kpi[mask_check_plan & mask_energo & mask_plan_year][report_columns]
         df_energy = df_kpi[mask_check_plan & mask_energo][report_columns]
+        df_energy_po = df_kpi[mask_check_plan & mask_energo & ~mask_po_self_do][report_columns]
+        df_energy_self_do = df_kpi[mask_check_plan & mask_energo & mask_po_self_do][report_columns]
         print(f'Создаем лист отчета: {Colors.GREEN}"Энерго"{Colors.END}')
         if self.args.add_obligations:
-            wb.excel_format_table(self.make_report(df_energy, self.obligations["Энергетика"]), 'Энерго', report_sheets['Энерго'])
+            # wb.excel_format_table(self.make_report(df_energy, self.obligations["Энергетика"]), 'Энерго', report_sheets['Энерго'])
+            wb.excel_format_table(self.make_report(df_energy_po, self.obligations["Энергетика"]), 'Энерго ПО строительства', report_sheets['Энерго ПО строительства'])
+            wb.excel_format_table(self.make_report(df_energy_self_do, self.obligations["Энергетика"]), 'Энерго ПО ПЭ', report_sheets['Энерго ПО ПЭ'])
         else:
-            wb.excel_format_table(self.make_report(df_energy), 'Энерго', report_sheets['Энерго'])
+            # wb.excel_format_table(self.make_report(df_energy), 'Энерго', report_sheets['Энерго'])
+            wb.excel_format_table(self.make_report(df_energy_po), 'Энерго ПО строительства', report_sheets['Энерго ПО строительства'])
+            wb.excel_format_table(self.make_report(df_energy_self_do), 'Энерго ПО ПЭ', report_sheets['Энерго ПО ПЭ'])
 
         # df_climate = df_kpi[mask_check_plan & mask_climate & mask_plan_year][report_columns]
         df_climate = df_kpi[mask_check_plan & mask_climate][report_columns]
+        df_climate_po = df_kpi[mask_check_plan & mask_climate & ~mask_po_self_do][report_columns]
+        df_climate_self_do = df_kpi[mask_check_plan & mask_climate & mask_po_self_do][report_columns]
         print(f'Создаем лист отчета: {Colors.GREEN}"Климатика"{Colors.END}')
         if self.args.add_obligations:
-            wb.excel_format_table(self.make_report(df_climate, self.obligations["Климатика"]), 'Климатика', report_sheets['Климатика'])
+        #   wb.excel_format_table(self.make_report(df_climate, self.obligations["Климатика"]), 'Климатика', report_sheets['Климатика'])
+            wb.excel_format_table(self.make_report(df_climate_po, self.obligations["Климатика"]), 'Климатика ПО строительства', report_sheets['Климатика ПО строительства'])
+            wb.excel_format_table(self.make_report(df_climate_self_do, self.obligations["Климатика"]), 'Климатика ПО ПЭ', report_sheets['Климатика ПО ПЭ'])
         else:
-            wb.excel_format_table(self.make_report(df_climate, ), 'Климатика', report_sheets['Климатика'])
+            # wb.excel_format_table(self.make_report(df_climate, ), 'Климатика', report_sheets['Климатика'])
+            wb.excel_format_table(self.make_report(df_climate_po, ), 'Климатика ПО строительства', report_sheets['Климатика ПО строительства'])
+            wb.excel_format_table(self.make_report(df_climate_self_do, ), 'Климатика ПО ПЭ', report_sheets['Климатика ПО ПЭ'])
 
         if not self.args.dont_save_ap:
             # Сохраняем АП
             for sheet_name, df_name in [["АП БС", df_all_bs], ["АП РРЛ", df_rrl], ["АП Энерго", df_energy], ["АП Климатика", df_climate]]:
                 mask_prognoz_date = self.make_date_mask(df_name, 'PROGNOZ_DATE', self.begin_date, self.end_date)
-                _df = df_name[mask_prognoz_date].sort_values(by=['build_priority', 'RO']).rename(columns=rename_columns)
+                _df = df_name[mask_prognoz_date].sort_values(by=['RO']).rename(columns=rename_columns)
                 if not _df.empty:
                     print(f'Создаем лист отчета: {Colors.GREEN}"{sheet_name}"{Colors.END}')
                     wb.excel_format_table(_df, sheet_name, report_sheets[sheet_name])
