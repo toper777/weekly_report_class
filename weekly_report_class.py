@@ -208,7 +208,7 @@ class WeeklyReport:
             raise MyLoggingException(f'Файл {self.url} не существует. Ошибка {ex}')
 
     @staticmethod
-    def make_date_mask(_df: pd.DataFrame, column_name: str, _begin_date: datetime, _end_date: datetime) -> pd.Series:
+    def make_date_mask(_df: pd.DataFrame, column_name: str, _begin_date: datetime, _end_date: datetime) -> bool:
         _result = (_df[column_name] >= _begin_date) & (_df[column_name] <= _end_date)
         return _result
 
@@ -240,13 +240,11 @@ class WeeklyReport:
 
         logger.debug(_df[mask_prognoz_date])
         df_cumm_plan = _df[mask_cumm_plan_date].groupby(['RO_CLUSTER', 'RO']).agg({'PLAN_DATE_END': 'count', }).reset_index()
-        df_cumm_prognoz = _df[mask_cumm_prognoz_date].groupby(['RO_CLUSTER', 'RO']).agg({'PROGNOZ_DATE': 'count', }).rename(columns={'PROGNOZ_DATE':
-                                                                                                                                         'CUMM_PROGNOZ_DATE'}).reset_index()
+        df_cumm_prognoz = _df[mask_cumm_prognoz_date].groupby(['RO_CLUSTER', 'RO']).agg({'PROGNOZ_DATE': 'count', }).rename(columns={'PROGNOZ_DATE': 'CUMM_PROGNOZ_DATE'}).reset_index()
         df_prognoz = _df[mask_prognoz_date].groupby(['RO_CLUSTER', 'RO']).agg({'PROGNOZ_DATE': 'count', }).reset_index()
         df_fact = _df[mask_fact_date & mask_check_fact].groupby(['RO_CLUSTER', 'RO']).agg({'CHECK_FACT': 'count', }).reset_index()
         df_vidacha = _df[mask_vidacha_date & mask_check_vidacha].groupby(['RO_CLUSTER', 'RO']).agg({'VIDACHA': 'count', }).reset_index()
-        df_vidacha_forward = _df[mask_vidacha_date_forward & mask_check_vidacha].groupby(['RO_CLUSTER', 'RO']).agg({'VIDACHA': 'count', }).rename(columns={'VIDACHA':
-                                                                                                                                                               'FORWARD_VIDACHA'}).reset_index()
+        df_vidacha_forward = _df[mask_vidacha_date_forward & mask_check_vidacha].groupby(['RO_CLUSTER', 'RO']).agg({'VIDACHA': 'count', }).rename(columns={'VIDACHA': 'FORWARD_VIDACHA'}).reset_index()
 
         # Список данных для объединения
         if self.args.add_obligations:
@@ -439,7 +437,7 @@ class WeeklyReport:
         df_climate_self_do = df_kpi[mask_check_plan & mask_climate & mask_po_self_do][report_columns]
         print(f'Создаем лист отчета: {Colors.GREEN}"Климатика"{Colors.END}')
         if self.args.add_obligations:
-        #   wb.excel_format_table(self.make_report(df_climate, self.obligations["Климатика"]), 'Климатика', report_sheets['Климатика'])
+            # wb.excel_format_table(self.make_report(df_climate, self.obligations["Климатика"]), 'Климатика', report_sheets['Климатика'])
             wb.excel_format_table(self.make_report(df_climate_po, self.obligations["Климатика"]), 'Климатика ПО строительства', report_sheets['Климатика ПО строительства'])
             wb.excel_format_table(self.make_report(df_climate_self_do, self.obligations["Климатика"]), 'Климатика ПО ПЭ', report_sheets['Климатика ПО ПЭ'])
         else:
