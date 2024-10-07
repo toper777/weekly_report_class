@@ -20,7 +20,7 @@ from FormattedWorkbook import FormattedWorkbook
 from MyLoggingException import MyLoggingException
 
 PROGRAM_NAME = Path(__file__).stem
-PROGRAM_VERSION = "0.4.5"
+PROGRAM_VERSION = "0.4.6"
 
 
 class WeeklyReport:
@@ -212,7 +212,7 @@ class WeeklyReport:
         _result = (_df[column_name] >= _begin_date) & (_df[column_name] <= _end_date)
         return _result
 
-    def make_report(self, _df: pd.DataFrame, _dfo: pd.DataFrame = None) -> pd.DataFrame:
+    def make_report(self, _df: pd.DataFrame, _dfo: pd.DataFrame = None, divide_prognos = False) -> pd.DataFrame:
         delta_char = f'{chr(0x0394)}'
         _df[['PROGNOZ_DATE', 'PLAN_DATE_END']].apply(pd.to_datetime)
 
@@ -226,6 +226,9 @@ class WeeklyReport:
             'FORWARD_VIDACHA': 'Выдача вперёд',
             'CHECK_FACT': 'Факт',
             '83_done': 'Выдача (по 83)',
+            'PROGNOZ_DATE_PO': 'Прогноз периода. ПО строительства',
+            'PROGNOZ_DATE_SELF': 'Прогноз периода. ПО ПЭ',
+
         }
         mask_cumm_plan_date = self.make_date_mask(_df, 'PLAN_DATE_END', self.begin_of_the_year, self.end_date)
         mask_cumm_prognoz_date = self.make_date_mask(_df, 'PROGNOZ_DATE', self.begin_of_the_year, self.end_date)
@@ -237,20 +240,34 @@ class WeeklyReport:
         mask_check_fact = (_df['CHECK_FACT'] == 1)
         mask_check_vidacha = (_df['VIDACHA'] == 1)
         # mask_check_vidacha = (_df['83_done'] == 1)
+        if divide_prognos:
+            mask_po_self_do = _df['PO'] == 'Работы своими силами'
 
         logger.debug(_df[mask_prognoz_date])
         df_cumm_plan = _df[mask_cumm_plan_date].groupby(['RO_CLUSTER', 'RO']).agg({'PLAN_DATE_END': 'count', }).reset_index()
         df_cumm_prognoz = _df[mask_cumm_prognoz_date].groupby(['RO_CLUSTER', 'RO']).agg({'PROGNOZ_DATE': 'count', }).rename(columns={'PROGNOZ_DATE': 'CUMM_PROGNOZ_DATE'}).reset_index()
-        df_prognoz = _df[mask_prognoz_date].groupby(['RO_CLUSTER', 'RO']).agg({'PROGNOZ_DATE': 'count', }).reset_index()
+        if divide_prognos:
+            df_prognoz_po = _df[mask_prognoz_date & ~mask_po_self_do].groupby(['RO_CLUSTER', 'RO']).agg({'PROGNOZ_DATE': 'count', }).rename(columns={'PROGNOZ_DATE':
+                                                                                                                                                  'PROGNOZ_DATE_PO'}).reset_index()
+            df_prognoz_self_do = _df[mask_prognoz_date & mask_po_self_do].groupby(['RO_CLUSTER', 'RO']).agg({'PROGNOZ_DATE': 'count', }).rename(columns={'PROGNOZ_DATE':
+                                                                                                                                                      'PROGNOZ_DATE_SELF'}).reset_index()
+        else:
+            df_prognoz = _df[mask_prognoz_date].groupby(['RO_CLUSTER', 'RO']).agg({'PROGNOZ_DATE': 'count', }).reset_index()
         df_fact = _df[mask_fact_date & mask_check_fact].groupby(['RO_CLUSTER', 'RO']).agg({'CHECK_FACT': 'count', }).reset_index()
         df_vidacha = _df[mask_vidacha_date & mask_check_vidacha].groupby(['RO_CLUSTER', 'RO']).agg({'VIDACHA': 'count', }).reset_index()
         df_vidacha_forward = _df[mask_vidacha_date_forward & mask_check_vidacha].groupby(['RO_CLUSTER', 'RO']).agg({'VIDACHA': 'count', }).rename(columns={'VIDACHA': 'FORWARD_VIDACHA'}).reset_index()
 
         # Список данных для объединения
         if self.args.add_obligations:
-            data_frames = [df_cumm_plan, _dfo, df_cumm_prognoz, df_fact, df_vidacha, df_vidacha_forward, df_prognoz]
+            if divide_prognos:
+                data_frames = [df_cumm_plan, _dfo, df_cumm_prognoz, df_fact, df_vidacha, df_vidacha_forward, df_prognoz_po, df_prognoz_self_do]
+            else:
+                data_frames = [df_cumm_plan, _dfo, df_cumm_prognoz, df_fact, df_vidacha, df_vidacha_forward, df_prognoz]
         else:
-            data_frames = [df_cumm_plan, df_cumm_prognoz, df_fact, df_vidacha, df_vidacha_forward, df_prognoz]
+            if divide_prognos:
+                data_frames = [df_cumm_plan, df_cumm_prognoz, df_fact, df_vidacha, df_vidacha_forward, df_prognoz_po, df_prognoz_self_do]
+            else:
+                data_frames = [df_cumm_plan, df_cumm_prognoz, df_fact, df_vidacha, df_vidacha_forward, df_prognoz]
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=FutureWarning)
@@ -274,24 +291,47 @@ class WeeklyReport:
 
             # Удаляем кластеры из итоговой таблицы
             if self.args.add_obligations:
-                df_merged = df_merged[[rename_columns['RO'],
-                                       rename_columns['PLAN_DATE_END'],
-                                       'Обязательства регионов',
-                                       rename_columns['PROGNOZ_DATE'],
-                                       rename_columns['VIDACHA'],
-                                       rename_columns['FORWARD_VIDACHA'],
-                                       rename_columns['CHECK_FACT'],
-                                       rename_columns['PROGNOZ_DATE'],
-                                       delta_char]]
+                if divide_prognos:
+                    df_merged = df_merged[[rename_columns['RO'],
+                                           rename_columns['PLAN_DATE_END'],
+                                           'Обязательства регионов',
+                                           rename_columns['CUMM_PROGNOZ_DATE'],
+                                           rename_columns['VIDACHA'],
+                                           rename_columns['FORWARD_VIDACHA'],
+                                           rename_columns['CHECK_FACT'],
+                                           rename_columns['PROGNOZ_DATE_PO'],
+                                           rename_columns['PROGNOZ_DATE_SELF'],
+                                           delta_char]]
+                else:
+                    df_merged = df_merged[[rename_columns['RO'],
+                                           rename_columns['PLAN_DATE_END'],
+                                           'Обязательства регионов',
+                                           rename_columns['CUMM_PROGNOZ_DATE'],
+                                           rename_columns['VIDACHA'],
+                                           rename_columns['FORWARD_VIDACHA'],
+                                           rename_columns['CHECK_FACT'],
+                                           rename_columns['PROGNOZ_DATE'],
+                                           delta_char]]
             else:
-                df_merged = df_merged[[rename_columns['RO'],
-                                       rename_columns['PLAN_DATE_END'],
-                                       rename_columns['CUMM_PROGNOZ_DATE'],
-                                       rename_columns['VIDACHA'],
-                                       rename_columns['FORWARD_VIDACHA'],
-                                       rename_columns['CHECK_FACT'],
-                                       rename_columns['PROGNOZ_DATE'],
-                                       delta_char]]
+                if divide_prognos:
+                    df_merged = df_merged[[rename_columns['RO'],
+                                           rename_columns['PLAN_DATE_END'],
+                                           rename_columns['CUMM_PROGNOZ_DATE'],
+                                           rename_columns['VIDACHA'],
+                                           rename_columns['FORWARD_VIDACHA'],
+                                           rename_columns['CHECK_FACT'],
+                                           rename_columns['PROGNOZ_DATE_PO'],
+                                           rename_columns['PROGNOZ_DATE_SELF'],
+                                           delta_char]]
+                else:
+                    df_merged = df_merged[[rename_columns['RO'],
+                                           rename_columns['PLAN_DATE_END'],
+                                           rename_columns['CUMM_PROGNOZ_DATE'],
+                                           rename_columns['VIDACHA'],
+                                           rename_columns['FORWARD_VIDACHA'],
+                                           rename_columns['CHECK_FACT'],
+                                           rename_columns['PROGNOZ_DATE'],
+                                           delta_char]]
 
         return df_merged
 
@@ -419,31 +459,31 @@ class WeeklyReport:
 
         # df_energy = df_kpi[mask_check_plan & mask_energo & mask_plan_year][report_columns]
         df_energy = df_kpi[mask_check_plan & mask_energo][report_columns]
-        df_energy_po = df_kpi[mask_check_plan & mask_energo & ~mask_po_self_do][report_columns]
-        df_energy_self_do = df_kpi[mask_check_plan & mask_energo & mask_po_self_do][report_columns]
+        # df_energy_po = df_kpi[mask_check_plan & mask_energo & ~mask_po_self_do][report_columns]
+        # df_energy_self_do = df_kpi[mask_check_plan & mask_energo & mask_po_self_do][report_columns]
         print(f'Создаем лист отчета: {Colors.GREEN}"Энерго"{Colors.END}')
         if self.args.add_obligations:
-            # wb.excel_format_table(self.make_report(df_energy, self.obligations["Энергетика"]), 'Энерго', report_sheets['Энерго'])
-            wb.excel_format_table(self.make_report(df_energy_po, self.obligations["Энергетика"]), 'Энерго ПО строительства', report_sheets['Энерго ПО строительства'])
-            wb.excel_format_table(self.make_report(df_energy_self_do, self.obligations["Энергетика"]), 'Энерго ПО ПЭ', report_sheets['Энерго ПО ПЭ'])
+            wb.excel_format_table(self.make_report(df_energy, self.obligations["Энергетика"], divide_prognos=True), 'Энерго', report_sheets['Энерго'])
+            # wb.excel_format_table(self.make_report(df_energy_po, self.obligations["Энергетика"]), 'Энерго ПО строительства', report_sheets['Энерго ПО строительства'])
+            # wb.excel_format_table(self.make_report(df_energy_self_do, self.obligations["Энергетика"]), 'Энерго ПО ПЭ', report_sheets['Энерго ПО ПЭ'])
         else:
-            # wb.excel_format_table(self.make_report(df_energy), 'Энерго', report_sheets['Энерго'])
-            wb.excel_format_table(self.make_report(df_energy_po), 'Энерго ПО строительства', report_sheets['Энерго ПО строительства'])
-            wb.excel_format_table(self.make_report(df_energy_self_do), 'Энерго ПО ПЭ', report_sheets['Энерго ПО ПЭ'])
+            wb.excel_format_table(self.make_report(df_energy, divide_prognos=True), 'Энерго', report_sheets['Энерго'])
+            # wb.excel_format_table(self.make_report(df_energy_po), 'Энерго ПО строительства', report_sheets['Энерго ПО строительства'])
+            # wb.excel_format_table(self.make_report(df_energy_self_do), 'Энерго ПО ПЭ', report_sheets['Энерго ПО ПЭ'])
 
         # df_climate = df_kpi[mask_check_plan & mask_climate & mask_plan_year][report_columns]
         df_climate = df_kpi[mask_check_plan & mask_climate][report_columns]
-        df_climate_po = df_kpi[mask_check_plan & mask_climate & ~mask_po_self_do][report_columns]
-        df_climate_self_do = df_kpi[mask_check_plan & mask_climate & mask_po_self_do][report_columns]
+        # df_climate_po = df_kpi[mask_check_plan & mask_climate & ~mask_po_self_do][report_columns]
+        # df_climate_self_do = df_kpi[mask_check_plan & mask_climate & mask_po_self_do][report_columns]
         print(f'Создаем лист отчета: {Colors.GREEN}"Климатика"{Colors.END}')
         if self.args.add_obligations:
-            # wb.excel_format_table(self.make_report(df_climate, self.obligations["Климатика"]), 'Климатика', report_sheets['Климатика'])
-            wb.excel_format_table(self.make_report(df_climate_po, self.obligations["Климатика"]), 'Климатика ПО строительства', report_sheets['Климатика ПО строительства'])
-            wb.excel_format_table(self.make_report(df_climate_self_do, self.obligations["Климатика"]), 'Климатика ПО ПЭ', report_sheets['Климатика ПО ПЭ'])
+            wb.excel_format_table(self.make_report(df_climate, self.obligations["Климатика"], divide_prognos=True), 'Климатика', report_sheets['Климатика'])
+            # wb.excel_format_table(self.make_report(df_climate_po, self.obligations["Климатика"]), 'Климатика ПО строительства', report_sheets['Климатика ПО строительства'])
+            # wb.excel_format_table(self.make_report(df_climate_self_do, self.obligations["Климатика"]), 'Климатика ПО ПЭ', report_sheets['Климатика ПО ПЭ'])
         else:
-            # wb.excel_format_table(self.make_report(df_climate, ), 'Климатика', report_sheets['Климатика'])
-            wb.excel_format_table(self.make_report(df_climate_po, ), 'Климатика ПО строительства', report_sheets['Климатика ПО строительства'])
-            wb.excel_format_table(self.make_report(df_climate_self_do, ), 'Климатика ПО ПЭ', report_sheets['Климатика ПО ПЭ'])
+            wb.excel_format_table(self.make_report(df_climate, divide_prognos=True), 'Климатика', report_sheets['Климатика'])
+            # wb.excel_format_table(self.make_report(df_climate_po, ), 'Климатика ПО строительства', report_sheets['Климатика ПО строительства'])
+            # wb.excel_format_table(self.make_report(df_climate_self_do, ), 'Климатика ПО ПЭ', report_sheets['Климатика ПО ПЭ'])
 
         if not self.args.dont_save_ap:
             # Сохраняем АП
