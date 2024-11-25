@@ -20,7 +20,7 @@ from FormattedWorkbook import FormattedWorkbook
 from MyLoggingException import MyLoggingException
 
 PROGRAM_NAME = Path(__file__).stem
-PROGRAM_VERSION = "0.4.7"
+PROGRAM_VERSION = "0.4.8"
 
 
 class WeeklyReport:
@@ -440,7 +440,7 @@ class WeeklyReport:
             mask_plan_year = df_kpi['PLAN_YEAR'] == self.process_year[0]
 
         mask_new_bs = df_kpi['CHECK_NEW_PLAN'] == 'Новая'
-        mask_check_plan = df_kpi['CHECK_PLAN'] == 'Да'
+        mask_check_plan = (df_kpi['CHECK_PLAN'] == 'Да') | (df_kpi['CHECK_FACT'] == 1)
 
         # mask_2024_2023_boost = df_kpi['PROGRAM'] == "КФ. Развитие регионов_Ускоренные запуски 2024. 2023"
         # mask_check_plan = mask_check_plan | mask_2024_2023_boost
