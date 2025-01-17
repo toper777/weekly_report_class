@@ -20,7 +20,7 @@ from FormattedWorkbook import FormattedWorkbook
 from MyLoggingException import MyLoggingException
 
 PROGRAM_NAME = Path(__file__).stem
-PROGRAM_VERSION = "0.4.8"
+PROGRAM_VERSION = "0.5.1"
 
 
 class WeeklyReport:
@@ -239,7 +239,7 @@ class WeeklyReport:
             'PLAN_DATE_END': 'Оперплан',
             'PROGNOZ_DATE': 'Прогноз периода',
             'CUMM_PROGNOZ_DATE': 'Прогноз',
-            'VIDACHA': 'Выдача',
+            'Выдача оборудования': 'Выдача',
             'FORWARD_VIDACHA': 'Выдача вперёд',
             'CHECK_FACT': 'Факт',
             '83_done': 'Выдача (по 83)',
@@ -255,12 +255,15 @@ class WeeklyReport:
         mask_vidacha_date = self.make_date_mask(_df, 'PROGNOZ_DATE', self.begin_of_the_year, self.end_date)
         mask_vidacha_date_forward = self.make_date_mask(_df, 'PROGNOZ_DATE', self.end_date + datetime.timedelta(seconds=2), self.end_of_the_year)
         mask_check_fact = (_df['CHECK_FACT'] == 1)
-        mask_check_vidacha = (_df['VIDACHA'] == 1)
+        mask_check_vidacha = (_df['Выдача оборудования'] == 1)
         # mask_check_vidacha = (_df['83_done'] == 1)
 
+        mask_exclude_done_2024 = _df['MIN_DATE_FACT'] < datetime.datetime(2025, 1, 1)
+
         logger.debug(_df[mask_prognoz_date])
-        df_cumm_plan = _df[mask_cumm_plan_date].groupby(['RO_CLUSTER', 'RO']).agg({'PLAN_DATE_END': 'count', }).reset_index()
-        df_cumm_prognoz = _df[mask_cumm_prognoz_date].groupby(['RO_CLUSTER', 'RO']).agg({'PROGNOZ_DATE': 'count', }).rename(columns={'PROGNOZ_DATE': 'CUMM_PROGNOZ_DATE'}).reset_index()
+        df_cumm_plan = _df[mask_cumm_plan_date & ~mask_exclude_done_2024].groupby(['RO_CLUSTER', 'RO']).agg({'PLAN_DATE_END': 'count', }).reset_index()
+        df_cumm_prognoz = _df[mask_cumm_prognoz_date & ~mask_exclude_done_2024].groupby(['RO_CLUSTER', 'RO']).agg({'PROGNOZ_DATE': 'count', }).rename(columns={'PROGNOZ_DATE':
+                                                                                                                                          'CUMM_PROGNOZ_DATE'}).reset_index()
         if divide_prognosis:
             mask_po_self_do = _df['PO'] == 'Работы своими силами'
             df_prognoz_po = _df[mask_prognoz_date & ~mask_po_self_do].groupby(
@@ -274,8 +277,8 @@ class WeeklyReport:
         else:
             df_prognoz = _df[mask_prognoz_date].groupby(['RO_CLUSTER', 'RO']).agg({'PROGNOZ_DATE': 'count', }).reset_index()
         df_fact = _df[mask_fact_date & mask_check_fact].groupby(['RO_CLUSTER', 'RO']).agg({'CHECK_FACT': 'count', }).reset_index()
-        df_vidacha = _df[mask_vidacha_date & mask_check_vidacha].groupby(['RO_CLUSTER', 'RO']).agg({'VIDACHA': 'count', }).reset_index()
-        df_vidacha_forward = _df[mask_vidacha_date_forward & mask_check_vidacha].groupby(['RO_CLUSTER', 'RO']).agg({'VIDACHA': 'count', }).rename(columns={'VIDACHA': 'FORWARD_VIDACHA'}).reset_index()
+        df_vidacha = _df[mask_vidacha_date & mask_check_vidacha].groupby(['RO_CLUSTER', 'RO']).agg({'Выдача оборудования': 'count', }).reset_index()
+        df_vidacha_forward = _df[mask_vidacha_date_forward & mask_check_vidacha].groupby(['RO_CLUSTER', 'RO']).agg({'Выдача оборудования': 'count', }).rename(columns={'Выдача оборудования': 'FORWARD_VIDACHA'}).reset_index()
 
         # Список данных для объединения
         if self.args.add_obligations:
@@ -316,7 +319,7 @@ class WeeklyReport:
                                            rename_columns['PLAN_DATE_END'],
                                            'Обязательства регионов',
                                            rename_columns['CUMM_PROGNOZ_DATE'],
-                                           rename_columns['VIDACHA'],
+                                           rename_columns['Выдача оборудования'],
                                            rename_columns['FORWARD_VIDACHA'],
                                            rename_columns['CHECK_FACT'],
                                            rename_columns['PROGNOZ_DATE_PO'],
@@ -327,7 +330,7 @@ class WeeklyReport:
                                            rename_columns['PLAN_DATE_END'],
                                            'Обязательства регионов',
                                            rename_columns['CUMM_PROGNOZ_DATE'],
-                                           rename_columns['VIDACHA'],
+                                           rename_columns['Выдача оборудования'],
                                            rename_columns['FORWARD_VIDACHA'],
                                            rename_columns['CHECK_FACT'],
                                            rename_columns['PROGNOZ_DATE'],
@@ -337,7 +340,7 @@ class WeeklyReport:
                     df_merged = df_merged[[rename_columns['RO'],
                                            rename_columns['PLAN_DATE_END'],
                                            rename_columns['CUMM_PROGNOZ_DATE'],
-                                           rename_columns['VIDACHA'],
+                                           rename_columns['Выдача оборудования'],
                                            rename_columns['FORWARD_VIDACHA'],
                                            rename_columns['CHECK_FACT'],
                                            rename_columns['PROGNOZ_DATE_PO'],
@@ -347,7 +350,7 @@ class WeeklyReport:
                     df_merged = df_merged[[rename_columns['RO'],
                                            rename_columns['PLAN_DATE_END'],
                                            rename_columns['CUMM_PROGNOZ_DATE'],
-                                           rename_columns['VIDACHA'],
+                                           rename_columns['Выдача оборудования'],
                                            rename_columns['FORWARD_VIDACHA'],
                                            rename_columns['CHECK_FACT'],
                                            rename_columns['PROGNOZ_DATE'],
@@ -399,7 +402,7 @@ class WeeklyReport:
             'CHECK_FACT': 'Факт запуска',
             'RO_CLUSTER': 'Кластер',
             'build_priority': 'Приоритет',
-            'VIDACHA': 'Выдача оборудования',
+            'Выдача оборудования': 'Выдача оборудования',
             '83_done': 'Выдача по 83',
         }
 
@@ -417,7 +420,7 @@ class WeeklyReport:
             'PROGNOZ_DATE',
             'PROGNOZ_COMMENT',
             'MIN_DATE_FACT',
-            'VIDACHA',
+            'Выдача оборудования',
         ]
 
         mask_rrl_build = df_kpi['BP_ESUP'] == 'Строительство РРЛ'
