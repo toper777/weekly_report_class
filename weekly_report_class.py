@@ -20,7 +20,7 @@ from FormattedWorkbook import FormattedWorkbook
 from MyLoggingException import MyLoggingException
 
 PROGRAM_NAME = Path(__file__).stem
-PROGRAM_VERSION = "0.5.1"
+PROGRAM_VERSION = "0.5.2"
 
 
 class WeeklyReport:
@@ -258,6 +258,7 @@ class WeeklyReport:
         mask_check_vidacha = (_df['Выдача оборудования'] == 1)
         # mask_check_vidacha = (_df['83_done'] == 1)
 
+        # TODO: Временно до объединения программ 2024 и 2025
         mask_exclude_done_2024 = _df['MIN_DATE_FACT'] < datetime.datetime(2025, 1, 1)
 
         logger.debug(_df[mask_prognoz_date])
@@ -266,16 +267,16 @@ class WeeklyReport:
                                                                                                                                           'CUMM_PROGNOZ_DATE'}).reset_index()
         if divide_prognosis:
             mask_po_self_do = _df['PO'] == 'Работы своими силами'
-            df_prognoz_po = _df[mask_prognoz_date & ~mask_po_self_do].groupby(
+            df_prognoz_po = _df[mask_prognoz_date & ~mask_po_self_do& ~mask_exclude_done_2024].groupby(
                 ['RO_CLUSTER', 'RO']).agg(
                 {'PROGNOZ_DATE': 'count', }).rename(
                 columns={'PROGNOZ_DATE': 'PROGNOZ_DATE_PO'}).reset_index()
-            df_prognoz_self_do = _df[mask_prognoz_date & mask_po_self_do].groupby(
+            df_prognoz_self_do = _df[mask_prognoz_date & mask_po_self_do& ~mask_exclude_done_2024].groupby(
                 ['RO_CLUSTER', 'RO']).agg(
                 {'PROGNOZ_DATE': 'count', }).rename(
                 columns={'PROGNOZ_DATE': 'PROGNOZ_DATE_SELF'}).reset_index()
         else:
-            df_prognoz = _df[mask_prognoz_date].groupby(['RO_CLUSTER', 'RO']).agg({'PROGNOZ_DATE': 'count', }).reset_index()
+            df_prognoz = _df[mask_prognoz_date & ~mask_exclude_done_2024].groupby(['RO_CLUSTER', 'RO']).agg({'PROGNOZ_DATE': 'count', }).reset_index()
         df_fact = _df[mask_fact_date & mask_check_fact].groupby(['RO_CLUSTER', 'RO']).agg({'CHECK_FACT': 'count', }).reset_index()
         df_vidacha = _df[mask_vidacha_date & mask_check_vidacha].groupby(['RO_CLUSTER', 'RO']).agg({'Выдача оборудования': 'count', }).reset_index()
         df_vidacha_forward = _df[mask_vidacha_date_forward & mask_check_vidacha].groupby(['RO_CLUSTER', 'RO']).agg({'Выдача оборудования': 'count', }).rename(columns={'Выдача оборудования': 'FORWARD_VIDACHA'}).reset_index()
