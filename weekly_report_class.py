@@ -20,7 +20,7 @@ from FormattedWorkbook import FormattedWorkbook
 from MyLoggingException import MyLoggingException
 
 PROGRAM_NAME = Path(__file__).stem
-PROGRAM_VERSION = "0.5.2"
+PROGRAM_VERSION = "0.5.3"
 
 
 class WeeklyReport:
@@ -255,23 +255,29 @@ class WeeklyReport:
         mask_vidacha_date = self.make_date_mask(_df, 'PROGNOZ_DATE', self.begin_of_the_year, self.end_date)
         mask_vidacha_date_forward = self.make_date_mask(_df, 'PROGNOZ_DATE', self.end_date + datetime.timedelta(seconds=2), self.end_of_the_year)
         mask_check_fact = (_df['CHECK_FACT'] == 1)
+        mask_check_plan = (_df['CHECK_PLAN'] == "Да")
         mask_check_vidacha = (_df['Выдача оборудования'] == 1)
         # mask_check_vidacha = (_df['83_done'] == 1)
 
         # TODO: Временно до объединения программ 2024 и 2025
         mask_exclude_done_2024 = _df['MIN_DATE_FACT'] < datetime.datetime(2025, 1, 1)
 
+        # TODO:
+        mask_include_2025_done = _df['MIN_DATE_FACT'] >= datetime.datetime(2025, 1, 1)
+        mask_addition = (mask_include_2025_done & mask_check_plan & mask_check_fact)
+
         logger.debug(_df[mask_prognoz_date])
-        df_cumm_plan = _df[mask_cumm_plan_date & ~mask_exclude_done_2024].groupby(['RO_CLUSTER', 'RO']).agg({'PLAN_DATE_END': 'count', }).reset_index()
+        # df_cumm_plan = _df[(mask_cumm_plan_date | mask_addition) & ~mask_exclude_done_2024].groupby(['RO_CLUSTER', 'RO']).agg({'PLAN_DATE_END': 'count',}).reset_index()
+        df_cumm_plan = _df[(mask_cumm_plan_date) & ~mask_exclude_done_2024].groupby(['RO_CLUSTER', 'RO']).agg({'PLAN_DATE_END': 'count', }).reset_index()
         df_cumm_prognoz = _df[mask_cumm_prognoz_date & ~mask_exclude_done_2024].groupby(['RO_CLUSTER', 'RO']).agg({'PROGNOZ_DATE': 'count', }).rename(columns={'PROGNOZ_DATE':
-                                                                                                                                          'CUMM_PROGNOZ_DATE'}).reset_index()
+                                                                                                                                                                   'CUMM_PROGNOZ_DATE'}).reset_index()
         if divide_prognosis:
             mask_po_self_do = _df['PO'] == 'Работы своими силами'
-            df_prognoz_po = _df[mask_prognoz_date & ~mask_po_self_do& ~mask_exclude_done_2024].groupby(
+            df_prognoz_po = _df[mask_prognoz_date & ~mask_po_self_do & ~mask_exclude_done_2024].groupby(
                 ['RO_CLUSTER', 'RO']).agg(
                 {'PROGNOZ_DATE': 'count', }).rename(
                 columns={'PROGNOZ_DATE': 'PROGNOZ_DATE_PO'}).reset_index()
-            df_prognoz_self_do = _df[mask_prognoz_date & mask_po_self_do& ~mask_exclude_done_2024].groupby(
+            df_prognoz_self_do = _df[mask_prognoz_date & mask_po_self_do & ~mask_exclude_done_2024].groupby(
                 ['RO_CLUSTER', 'RO']).agg(
                 {'PROGNOZ_DATE': 'count', }).rename(
                 columns={'PROGNOZ_DATE': 'PROGNOZ_DATE_SELF'}).reset_index()
@@ -279,7 +285,8 @@ class WeeklyReport:
             df_prognoz = _df[mask_prognoz_date & ~mask_exclude_done_2024].groupby(['RO_CLUSTER', 'RO']).agg({'PROGNOZ_DATE': 'count', }).reset_index()
         df_fact = _df[mask_fact_date & mask_check_fact].groupby(['RO_CLUSTER', 'RO']).agg({'CHECK_FACT': 'count', }).reset_index()
         df_vidacha = _df[mask_vidacha_date & mask_check_vidacha].groupby(['RO_CLUSTER', 'RO']).agg({'Выдача оборудования': 'count', }).reset_index()
-        df_vidacha_forward = _df[mask_vidacha_date_forward & mask_check_vidacha].groupby(['RO_CLUSTER', 'RO']).agg({'Выдача оборудования': 'count', }).rename(columns={'Выдача оборудования': 'FORWARD_VIDACHA'}).reset_index()
+        df_vidacha_forward = _df[mask_vidacha_date_forward & mask_check_vidacha].groupby(['RO_CLUSTER', 'RO']).agg({'Выдача оборудования': 'count', }).rename(
+            columns={'Выдача оборудования': 'FORWARD_VIDACHA'}).reset_index()
 
         # Список данных для объединения
         if self.args.add_obligations:
@@ -411,6 +418,7 @@ class WeeklyReport:
             'ID_ESUP',
             'BP_ESUP',
             'PROGRAM',
+            'CHECK_PLAN',
             'CHECK_FACT',
             'RO',
             'RO_CLUSTER',
@@ -444,7 +452,8 @@ class WeeklyReport:
             mask_plan_year = df_kpi['PLAN_YEAR'] == self.process_year[0]
 
         mask_new_bs = df_kpi['CHECK_NEW_PLAN'] == 'Новая'
-        mask_check_plan = (df_kpi['CHECK_PLAN'] == 'Да') | (df_kpi['CHECK_FACT'] == 1)
+        # mask_check_plan = (df_kpi['CHECK_PLAN'] == 'Да') | (df_kpi['CHECK_FACT'] == 1)
+        mask_check_plan = (df_kpi['CHECK_PLAN'] == 'Да')
 
         # mask_2024_2023_boost = df_kpi['PROGRAM'] == "КФ. Развитие регионов_Ускоренные запуски 2024. 2023"
         # mask_check_plan = mask_check_plan | mask_2024_2023_boost
