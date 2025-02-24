@@ -20,7 +20,7 @@ from FormattedWorkbook import FormattedWorkbook
 from MyLoggingException import MyLoggingException
 
 PROGRAM_NAME = Path(__file__).stem
-PROGRAM_VERSION = "0.5.3"
+PROGRAM_VERSION = "0.5.4"
 
 
 class WeeklyReport:
@@ -283,6 +283,7 @@ class WeeklyReport:
                 columns={'PROGNOZ_DATE': 'PROGNOZ_DATE_SELF'}).reset_index()
         else:
             df_prognoz = _df[mask_prognoz_date & ~mask_exclude_done_2024].groupby(['RO_CLUSTER', 'RO']).agg({'PROGNOZ_DATE': 'count', }).reset_index()
+
         df_fact = _df[mask_fact_date & mask_check_fact].groupby(['RO_CLUSTER', 'RO']).agg({'CHECK_FACT': 'count', }).reset_index()
         df_vidacha = _df[mask_vidacha_date & mask_check_vidacha].groupby(['RO_CLUSTER', 'RO']).agg({'Выдача оборудования': 'count', }).reset_index()
         df_vidacha_forward = _df[mask_vidacha_date_forward & mask_check_vidacha].groupby(['RO_CLUSTER', 'RO']).agg({'Выдача оборудования': 'count', }).rename(
@@ -496,11 +497,11 @@ class WeeklyReport:
         # df_energy_self_do = df_kpi[mask_check_plan & mask_energo & mask_po_self_do][report_columns]
         print(f'Создаем лист отчета: {Colors.GREEN}"Энерго"{Colors.END}')
         if self.args.add_obligations:
-            wb.excel_format_table(self.make_report(df_energy, self.obligations["Энергетика"], divide_prognosis=True), 'Энерго', report_sheets['Энерго'])
+            wb.excel_format_table(self.make_report(df_energy, self.obligations["Энергетика"], divide_prognosis=False), 'Энерго', report_sheets['Энерго'])
             # wb.excel_format_table(self.make_report(df_energy_po, self.obligations["Энергетика"]), 'Энерго ПО строительства', report_sheets['Энерго ПО строительства'])
             # wb.excel_format_table(self.make_report(df_energy_self_do, self.obligations["Энергетика"]), 'Энерго ПО ПЭ', report_sheets['Энерго ПО ПЭ'])
         else:
-            wb.excel_format_table(self.make_report(df_energy, divide_prognosis=True), 'Энерго', report_sheets['Энерго'])
+            wb.excel_format_table(self.make_report(df_energy, divide_prognosis=False), 'Энерго', report_sheets['Энерго'])
             # wb.excel_format_table(self.make_report(df_energy_po), 'Энерго ПО строительства', report_sheets['Энерго ПО строительства'])
             # wb.excel_format_table(self.make_report(df_energy_self_do), 'Энерго ПО ПЭ', report_sheets['Энерго ПО ПЭ'])
 
@@ -510,11 +511,11 @@ class WeeklyReport:
         # df_climate_self_do = df_kpi[mask_check_plan & mask_climate & mask_po_self_do][report_columns]
         print(f'Создаем лист отчета: {Colors.GREEN}"Климатика"{Colors.END}')
         if self.args.add_obligations:
-            wb.excel_format_table(self.make_report(df_climate, self.obligations["Климатика"], divide_prognosis=True), 'Климатика', report_sheets['Климатика'])
+            wb.excel_format_table(self.make_report(df_climate, self.obligations["Климатика"], divide_prognosis=False), 'Климатика', report_sheets['Климатика'])
             # wb.excel_format_table(self.make_report(df_climate_po, self.obligations["Климатика"]), 'Климатика ПО строительства', report_sheets['Климатика ПО строительства'])
             # wb.excel_format_table(self.make_report(df_climate_self_do, self.obligations["Климатика"]), 'Климатика ПО ПЭ', report_sheets['Климатика ПО ПЭ'])
         else:
-            wb.excel_format_table(self.make_report(df_climate, divide_prognosis=True), 'Климатика', report_sheets['Климатика'])
+            wb.excel_format_table(self.make_report(df_climate, divide_prognosis=False), 'Климатика', report_sheets['Климатика'])
             # wb.excel_format_table(self.make_report(df_climate_po, ), 'Климатика ПО строительства', report_sheets['Климатика ПО строительства'])
             # wb.excel_format_table(self.make_report(df_climate_self_do, ), 'Климатика ПО ПЭ', report_sheets['Климатика ПО ПЭ'])
 
