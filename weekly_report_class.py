@@ -20,7 +20,7 @@ from FormattedWorkbook import FormattedWorkbook
 from MyLoggingException import MyLoggingException
 
 PROGRAM_NAME = Path(__file__).stem
-PROGRAM_VERSION = "0.5.4"
+PROGRAM_VERSION = "0.6.0"
 
 
 class WeeklyReport:
@@ -40,6 +40,7 @@ class WeeklyReport:
         self.parser.add_argument("-r", "--report-file", help="Имя файла с отчетом. Должен иметь расширение .xlsx")
         self.parser.add_argument("--add-obligations", action='store_true', help="добавить данные по обязательствам")
         self.parser.add_argument("-o", "--obligations-file", help="Файла с обязательствами")
+        self.parser.add_argument("--experimental", action='store_true', help="Включить в отчет экспериментальные разделы")
         self.args = self.parser.parse_args()
 
         if self.args.begin_date is None:
@@ -383,7 +384,11 @@ class WeeklyReport:
             'АП РРЛ': 'ap_rrl',
             'АП Энерго': 'ap_energy',
             'АП Климатика': 'ap_climate',
-            'Дата выгрузки данных': 'upload_date'
+            'Дата выгрузки данных': 'upload_date',
+            'IPBH': 'ipbh_report',
+            'ВОЛС': 'vols_report',
+            'АП IPBH': 'ap_ipbh',
+            'АП ВОЛС': 'ap_vols',
         }
 
         wb = FormattedWorkbook(logging_level=self.log_level)
@@ -440,6 +445,8 @@ class WeeklyReport:
         mask_bs_rs_on = df_kpi['BP_ESUP'] == 'БС_Включение RAN Sharing'
         mask_energo = df_kpi['BP_ESUP'] == 'Модернизация энергоснабжения'
         mask_climate = df_kpi['BP_ESUP'] == 'Модернизация климатического оборудования'
+        mask_ipbh = df_kpi['BP_ESUP'] == 'Ввод/модернизация/демонтаж элемента ТС - IPBH'
+        mask_vols = df_kpi['BP_ESUP'] == 'Строительство ВОЛС (городская)'
 
         mask_po_self_do = df_kpi['PO'] == 'Работы своими силами'
 
@@ -519,9 +526,22 @@ class WeeklyReport:
             # wb.excel_format_table(self.make_report(df_climate_po, ), 'Климатика ПО строительства', report_sheets['Климатика ПО строительства'])
             # wb.excel_format_table(self.make_report(df_climate_self_do, ), 'Климатика ПО ПЭ', report_sheets['Климатика ПО ПЭ'])
 
+        if self.args.experimental:
+            df_ipbh = df_kpi[mask_check_plan & mask_ipbh][report_columns]
+            print(f'Создаем лист отчета: {Colors.GREEN}"IPBH"{Colors.END}')
+            wb.excel_format_table(self.make_report(df_ipbh), 'IPBH', report_sheets['IPBH'])
+
+            df_vols = df_kpi[mask_check_plan & mask_vols][report_columns]
+            print(f'Создаем лист отчета: {Colors.GREEN}"ВОЛС"{Colors.END}')
+            wb.excel_format_table(self.make_report(df_vols), 'ВОЛС', report_sheets['ВОЛС'])
+
         if not self.args.dont_save_ap:
             # Сохраняем АП
-            for sheet_name, df_name in [["АП БС", df_all_bs], ["АП РРЛ", df_rrl], ["АП Энерго", df_energy], ["АП Климатика", df_climate]]:
+            ap_list = [["АП БС", df_all_bs], ["АП РРЛ", df_rrl], ["АП Энерго", df_energy], ["АП Климатика", df_climate]]
+            if self.args.experimental:
+                ap_list.append(["АП IPBH", df_ipbh])
+                ap_list.append(["АП ВОЛС", df_vols])
+            for sheet_name, df_name in ap_list:
                 mask_prognoz_date = self.make_date_mask(df_name, 'PROGNOZ_DATE', self.begin_date, self.end_date)
                 _df = df_name[mask_prognoz_date].sort_values(by=['RO']).rename(columns=rename_columns)
                 if not _df.empty:
