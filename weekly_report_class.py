@@ -20,7 +20,7 @@ from FormattedWorkbook import FormattedWorkbook
 from MyLoggingException import MyLoggingException
 
 PROGRAM_NAME = Path(__file__).stem
-PROGRAM_VERSION = "0.6.1"
+PROGRAM_VERSION = "0.6.2"
 
 
 class WeeklyReport:
@@ -170,6 +170,7 @@ class WeeklyReport:
         :param _df: данные для анализа
         :param _dfo: данные по обязательствам
         :param divide_prognosis: признак (False/True), который позволяет разделить данные прогноза на работы ПО и работы своими силами
+        :param add_spec: позволяет добавить в таблицу данные по комплектам 48 заявок и подаче в НП
         :return: возвращает сформированную сводную таблицу
         """
 
@@ -217,9 +218,8 @@ class WeeklyReport:
 
         logger.debug(_df[mask_prognoz_date])
         # df_cumm_plan = _df[(mask_cumm_plan_date | mask_addition) & ~mask_exclude_done_2024].groupby(['RO_CLUSTER', 'RO']).agg({'PLAN_DATE_END': 'count',}).reset_index()
-        df_cumm_plan = _df[(mask_cumm_plan_date) & ~mask_exclude_done_2024].groupby(['RO_CLUSTER', 'RO']).agg({'PLAN_DATE_END': 'count', }).reset_index()
-        df_cumm_prognoz = _df[mask_cumm_prognoz_date & ~mask_exclude_done_2024].groupby(['RO_CLUSTER', 'RO']).agg({'PROGNOZ_DATE': 'count', }).rename(columns={'PROGNOZ_DATE':
-                                                                                                                                                                   'CUMM_PROGNOZ_DATE'}).reset_index()
+        df_cumm_plan = _df[mask_cumm_plan_date & ~mask_exclude_done_2024].groupby(['RO_CLUSTER', 'RO']).agg({'PLAN_DATE_END': 'count', }).reset_index()
+        df_cumm_prognoz = _df[mask_cumm_prognoz_date & ~mask_exclude_done_2024].groupby(['RO_CLUSTER', 'RO']).agg({'PROGNOZ_DATE': 'count', }).rename(columns={'PROGNOZ_DATE': 'CUMM_PROGNOZ_DATE'}).reset_index()
         if divide_prognosis:
             mask_po_self_do = _df['PO'] == 'Работы своими силами'
             df_prognoz_po = _df[mask_prognoz_date & ~mask_po_self_do & ~mask_exclude_done_2024].groupby(
